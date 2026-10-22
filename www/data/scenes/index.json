@@ -1,0 +1,67 @@
+{
+ "scenes": [
+  {
+   "id": "qinggan-loop",
+   "title": "青甘大环线",
+   "days": "7天6晚",
+   "cities": [
+    "西宁",
+    "茶卡",
+    "大柴旦",
+    "敦煌",
+    "张掖"
+   ],
+   "cover": "images/qg-cover-v2.png",
+   "status": "ready",
+   "file": "qinggan-loop.json",
+   "focus": "50% 45%"
+  },
+  {
+   "id": "chuanxi-loop",
+   "title": "川西小环线",
+   "days": "5天4晚",
+   "cities": [
+    "成都",
+    "四姑娘山",
+    "丹巴",
+    "新都桥",
+    "康定"
+   ],
+   "cover": "images/cx-cover-v2.png",
+   "status": "ready",
+   "file": "chuanxi-loop.json",
+   "focus": "45% 25%"
+  },
+  {
+   "id": "yunnan-dali-lijiang",
+   "title": "云南大理丽江",
+   "days": "5天4晚",
+   "cities": [
+    "昆明",
+    "大理",
+    "丽江"
+   ],
+   "cover": "images/yn-cover-v2.png",
+   "status": "ready",
+   "file": "yunnan-dali-lijiang.json",
+   "focus": "30% 50%"
+  },
+  {
+   "id": "xinjiang-north",
+   "title": "新疆北疆环线",
+   "days": "7天6晚",
+   "cities": [
+    "乌鲁木齐",
+    "布尔津",
+    "喀纳斯",
+    "禾木",
+    "那拉提",
+    "赛里木湖"
+   ],
+   "cover": "images/xj-cover-v2.png",
+   "status": "ready",
+   "file": "xinjiang-north.json",
+   "focus": "50% 40%"
+  }
+ ]
+}

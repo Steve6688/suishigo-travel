@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F5F5F7">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="随时Go">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="stylesheet" href="./vendor/leaflet/leaflet.css">
+<title>随时Go</title>
+<style>
+:root{
+  --bg:#F5F5F7; --bg-grouped:#F2F2F7;
+  --card:#FFFFFF; --card-2:#FAFAFC;
+  --sep:rgba(60,60,67,.12);
+  --text-1:#1D1D1F; --text-2:rgba(60,60,67,.76); --text-3:rgba(60,60,67,.74);
+  --accent:#E8890C; --accent-ink:#8A4F00; --accent-soft:rgba(232,137,12,.12);
+  --success:#34A853; --danger:#E5484D;
+  --shadow-card:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);
+  --card2:#F2F2F7; --line:var(--sep);
+  --amber:var(--accent); --tx:var(--text-1); --tx2:var(--text-2); --tx3:var(--text-3);
+  --r-card:28px; --r-bar:32px;
+  --spring-snappy:cubic-bezier(.34,1.3,.64,1);
+  --spring-smooth:cubic-bezier(.32,.72,0,1);
+  --ease-out:cubic-bezier(.2,.8,.2,1);
+  --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+html.is-native{ --sat:max(env(safe-area-inset-top,0px),28px); --sab:max(env(safe-area-inset-bottom,0px),8px); }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--tx);overflow:hidden;
+  font-family:-apple-system,"PingFang SC","HarmonyOS Sans SC","MiSans","Noto Sans CJK SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a{color:inherit;text-decoration:none}
+img{display:block}
+input,select{font:inherit;color:var(--tx);background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:10px 12px;outline:none;min-width:0}
+input:focus,select:focus{border-color:rgba(232,137,12,.6)}
+select option{background:#FFFFFF;color:#1D1D1F}
+
+/* ===== 玻璃（仅 chrome） ===== */
+.glass{position:relative;background:rgba(255,255,255,.62);
+  backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
+  border:.5px solid rgba(255,255,255,.7);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 0 0 .5px rgba(0,0,0,.06),0 8px 28px rgba(0,0,0,.10)}
+.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.55) 0%,rgba(255,255,255,0) 50%)}
+.glass.on-light{background:rgba(255,255,255,.72);border-color:rgba(255,255,255,.7);color:var(--text-1)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){ .glass{background:rgba(255,255,255,.94)} }
+
+/* ===== 视图 ===== */
+.view{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:var(--bg)}
+#scene{display:none;z-index:10;overflow:hidden}
+#scene.open{display:block}
+#sceneScroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+
+/* ===== 首页 ===== */
+.home-wrap{padding:calc(var(--sat) + 14px) 16px calc(40px + var(--sab))}
+.home-head{display:flex;align-items:flex-end;justify-content:space-between;padding:6px 4px 14px}
+.brand{font-size:30px;font-weight:800;letter-spacing:.5px;line-height:1.1}
+.brand b{color:var(--accent-ink);font-weight:800}
+.brand-sub{font-size:13px;color:var(--tx2);margin-top:6px}
+.count-pill{font-size:12px;color:var(--tx2);border:1px solid var(--line);border-radius:999px;padding:5px 11px;background:var(--card)}
+.continue{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid rgba(232,137,12,.28);border-radius:20px;padding:12px 14px;margin-bottom:14px;transition:transform 280ms var(--spring-snappy)}
+.continue:active{transform:scale(.97);transition-duration:120ms;transition-timing-function:var(--ease-out)}
+.continue .ci{width:34px;height:34px;border-radius:12px;background:rgba(232,137,12,.14);color:var(--accent-ink);display:grid;place-items:center;font-size:16px;flex:none}
+.continue .ct{flex:1;min-width:0}.continue .ct small{display:block;font-size:11.5px;color:var(--tx2)}
+.continue .ct b{font-size:15px}.continue .chev{color:var(--accent-ink);font-size:20px}
+.scard{position:relative;display:block;height:248px;border-radius:var(--r-card);overflow:hidden;margin-bottom:16px;background:var(--card);
+  box-shadow:var(--shadow-card);transition:transform 280ms var(--spring-snappy)}
+.scard:active{transform:scale(.97);transition-duration:120ms;transition-timing-function:var(--ease-out)}
+.scard .cov{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scard .cov.ph{background:radial-gradient(120% 90% at 80% 0%,#FFF3E0 0%,#F2F2F7 55%,#E5E5EA 100%)}
+.scard .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.18) 0%,rgba(0,0,0,0) 20%),linear-gradient(0deg,rgba(0,0,0,.62) 0%,rgba(0,0,0,.25) 35%,rgba(0,0,0,0) 60%)}
+.scard .info{position:absolute;left:18px;right:96px;bottom:16px}
+.scard h2{font-size:22px;font-weight:800;line-height:1.2;color:#fff;text-shadow:0 1px 12px rgba(0,0,0,.25)}
+.scard .meta{font-size:13px;color:rgba(255,255,255,.9);margin:5px 0 8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:11.5px;padding:3px 9px;border-radius:999px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.28);color:#fff}
+.ring{position:absolute;right:16px;bottom:18px;width:66px;height:66px}
+.ring svg{width:66px;height:66px;transform:rotate(-90deg)}
+.ring .rt{position:absolute;inset:0;display:grid;place-items:center;font-size:14px;font-weight:800}
+.ph-badge{position:absolute;top:14px;left:14px;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;background:rgba(232,137,12,.16);color:var(--accent-ink);border:1px solid rgba(232,137,12,.35)}
+.ph-icon{position:absolute;top:50%;left:50%;transform:translate(-50%,-70%);font-size:40px;opacity:.35}
+.home-foot{text-align:center;font-size:12px;color:var(--tx3);margin-top:8px}
+
+/* ===== 场景 ===== */
+.topbar{position:absolute;z-index:20;left:12px;right:12px;top:calc(var(--sat) + 8px);height:52px;border-radius:999px;display:flex;align-items:center;gap:8px;padding:0 8px;
+  transition:transform 260ms var(--spring-smooth),opacity 260ms var(--spring-smooth)}
+.topbar .tb-title{flex:1;min-width:0;font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:opacity 220ms var(--ease-out)}
+.topbar.solid .tb-title{opacity:1}
+.icon-btn{width:38px;height:38px;border-radius:999px;display:grid;place-items:center;flex:none;font-size:18px;transition:transform 320ms var(--spring-snappy)}
+.icon-btn:active{transform:scale(.9);transition-duration:120ms}
+.icon-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hero{position:relative;height:300px;overflow:hidden}
+.hero img{width:100%;height:100%;object-fit:cover}
+.hero .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.18) 0%,rgba(0,0,0,0) 20%),linear-gradient(0deg,rgba(0,0,0,.62) 0%,rgba(0,0,0,.25) 35%,rgba(0,0,0,0) 60%)}
+.hero .ht{position:absolute;left:20px;right:20px;bottom:30px;z-index:2;color:#fff;text-shadow:0 1px 12px rgba(0,0,0,.25)}
+.status-pill{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.28);color:#fff;margin-bottom:6px}
+.hero h1{font-size:26px;font-weight:800;line-height:1.2}
+.hero .hd{font-size:13px;color:rgba(255,255,255,.9);margin-top:4px}
+.scene-body{padding:6px 16px calc(120px + var(--sab))}
+.pane{display:none}.pane.on{display:block}
+.pane.enter{animation:paneIn 220ms var(--ease-out) both}
+@keyframes paneIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.scene-in .hero .ht,.scene-in .scene-body{animation:sceneIn 300ms var(--spring-snappy) 120ms both}
+@keyframes sceneIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.sec-h{display:flex;align-items:center;justify-content:space-between;margin:18px 4px 10px;font-size:15px;font-weight:700}
+.sec-h small{position:relative;z-index:2;display:inline-flex;align-items:center;min-height:44px;padding:0 4px;font-size:12px;color:var(--tx2);font-weight:500}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow-card)}
+.p16{padding:16px}
+.lead{font-size:14.5px;color:var(--text-1)}
+.cityline{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:10px;font-size:13px}
+.cityline i{font-style:normal;color:#8A4F00}
+.stats{display:flex;gap:10px;margin-top:12px}
+.stat{flex:1;background:var(--card2);border-radius:16px;padding:10px 12px}
+.stat b{display:block;font-size:17px;color:var(--accent-ink)}.stat span{font-size:11.5px;color:var(--tx2)}
+/* 路线图 */
+.routemap{position:relative;border-radius:22px;overflow:hidden;background:#EEF0F4;border:1px solid var(--line)}
+.routemap svg{display:block;width:100%;height:auto}
+.rm-h{position:absolute;left:14px;top:10px;font-size:12.5px;color:var(--tx2)}
+/* 日卡 */
+.dcard{display:flex;align-items:center;gap:12px;padding:10px;margin-bottom:10px;transition:transform 280ms var(--spring-snappy)}
+.dcard:active{transform:scale(.97);transition-duration:120ms}
+.dtag{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:14px;color:var(--accent-ink);background:rgba(232,137,12,.1);border:1px solid rgba(232,137,12,.3)}
+.dthumb{flex:none;width:64px;height:64px;border-radius:14px;object-fit:cover;background:var(--card2)}
+.dmain{flex:1;min-width:0}
+.dmain b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dmain span{display:block;font-size:12.5px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dkm{flex:none;font-size:12px;color:var(--tx2);text-align:right}
+.chev{color:var(--tx3);font-size:20px;line-height:1}
+.tip{padding:14px 16px;margin-bottom:10px}
+.tip b{display:block;font-size:15px;margin-bottom:4px}
+.tip p{font-size:13.5px;color:var(--tx2)}
+/* 行程 */
+.daybar{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;margin:4px -16px 4px;padding-left:16px;padding-right:16px;scrollbar-width:none}
+.daybar::-webkit-scrollbar{display:none}
+.dchip{flex:none;min-width:58px;padding:8px 10px;border-radius:16px;background:var(--card);border:1px solid var(--line);text-align:center;transition:transform 280ms var(--spring-snappy),background-color 200ms}
+.dchip:active{transform:scale(.94);transition-duration:120ms}
+.dchip b{display:block;font-size:14px}.dchip span{font-size:11px;color:var(--tx2)}
+.dchip.on{background:rgba(232,137,12,.14);border-color:rgba(232,137,12,.55)}.dchip.on b{color:var(--accent-ink)}
+.dayhead{overflow:hidden}
+.dayhead img{width:100%;height:170px;object-fit:cover;border-radius:22px 22px 0 0}
+.dayhead .dh{padding:14px 16px}
+.dayhead h3{font-size:18px}
+.dayhead .dsub{font-size:12.5px;color:var(--tx2);margin-top:2px}
+.dayhead .hl{font-size:13.5px;margin-top:8px;color:var(--text-1)}
+.tl{position:relative;margin-top:14px;padding-left:22px}
+.tl::before{content:"";position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:linear-gradient(var(--amber),rgba(232,137,12,.1));border-radius:2px}
+.tli{position:relative;margin-bottom:12px;padding:14px 14px 12px}
+.tli::before{content:"";position:absolute;left:-20px;top:20px;width:10px;height:10px;border-radius:50%;background:var(--bg);border:2.5px solid var(--amber)}
+.tli .tt{font-size:12px;color:var(--accent-ink);font-weight:700}
+.tli h4{font-size:15px;margin:2px 0 4px}
+.tli p{font-size:13.5px;color:var(--tx2)}
+.tli .tip2{margin-top:8px;font-size:12.5px;color:var(--text-1);background:var(--card2);border-radius:12px;padding:8px 10px}
+.tli .tip2 b{color:var(--accent-ink)}
+.navbtn{display:inline-flex;align-items:center;gap:4px;margin-top:10px;font-size:12.5px;font-weight:700;color:var(--accent-ink);border:1px solid rgba(232,137,12,.4);border-radius:999px;padding:4px 12px;transition:transform 280ms var(--spring-snappy)}
+.navbtn:active{transform:scale(.94);transition-duration:120ms}
+.stay{display:flex;align-items:center;gap:12px;padding:14px 16px}
+.stay .si{font-size:22px}.stay .sm{flex:1;min-width:0}.stay .sm b{display:block;font-size:14.5px}.stay .sm span{font-size:12.5px;color:var(--tx2)}
+.stay .sp{color:var(--accent-ink);font-weight:800}
+/* 美食 */
+.fgroup{margin-bottom:14px}
+.fcity{display:flex;align-items:center;gap:8px;margin:16px 4px 8px;font-weight:800;font-size:16px}
+.fcity::before{content:"";width:4px;height:16px;border-radius:2px;background:var(--amber)}
+.food{padding:16px}
+.food h4{font-size:16px;margin-bottom:6px}
+.food p{font-size:13.5px;color:var(--tx2)}
+.food .addr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;font-size:13px;color:var(--text-1)}
+.food .addr .navbtn{margin:0;flex:none}
+/* 清单 */
+.clp{padding:16px;margin-top:6px}
+.clp .h{display:flex;justify-content:space-between;align-items:baseline}
+.clp .h b{font-size:28px;color:var(--accent-ink)}
+.bar{height:8px;border-radius:8px;background:var(--card2);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#F2A93B,#E8890C);transform-origin:left;transform:scaleX(0);transition:transform 420ms var(--spring-smooth)}
+.clg h3{font-size:14px;margin:18px 6px 8px;color:var(--tx2);font-weight:700}
+.cli{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--line)}
+.cli:last-child{border-bottom:0}
+.cbx{flex:none;width:24px;height:24px;border-radius:8px;border:2px solid rgba(60,60,67,.3);display:grid;place-items:center;color:#fff;font-size:14px;font-weight:900;transition:transform 280ms var(--spring-snappy)}
+.cbx i{font-style:normal;opacity:0;transform:scale(.4);transition:opacity 160ms,transform 280ms var(--spring-snappy)}
+.cli.done .cbx{background:var(--amber);border-color:var(--accent-ink)}
+.cli.done .cbx i{opacity:1;transform:none}
+.cli:active .cbx{transform:scale(.88);transition-duration:120ms}
+.cli .cn{flex:1;min-width:0;font-size:14.5px}
+.cli.done .cn{color:var(--tx3);text-decoration:line-through}
+.cli .cr{font-size:12px;color:var(--tx2);text-align:right;max-width:42%}
+.cl-add{display:flex;gap:8px;padding:10px 12px}
+.cl-add input{flex:1}
+.add-btn{flex:none;display:inline-grid;place-items:center;padding:0 14px;height:42px;border-radius:14px;background:var(--amber);color:#fff;font-weight:800;font-size:14px;cursor:pointer;transition:transform 280ms var(--spring-snappy)}
+.add-btn:active{transform:scale(.94);transition-duration:120ms}
+/* 工具 */
+.trow{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--line);transition:transform 280ms var(--spring-snappy)}
+.trow:last-child{border-bottom:0}
+.trow:active{transform:scale(.98);transition-duration:120ms}
+.tico{flex:none;width:42px;height:42px;border-radius:14px;display:grid;place-items:center;font-size:20px;background:var(--card2)}
+.tmain{flex:1;min-width:0}.tmain b{display:block;font-size:15.5px}.tmain span{font-size:12.5px;color:var(--tx2)}
+.badge{font-size:11.5px;padding:2px 8px;border-radius:999px;background:var(--card2);color:var(--tx2);margin-right:6px}
+/* 空状态 */
+.empty{text-align:center;padding:40px 24px}
+.empty .ei{font-size:46px;opacity:.6}
+.empty h3{font-size:18px;margin:12px 0 6px}
+.empty p{font-size:13.5px;color:var(--tx2)}
+.empty .add-btn{margin-top:18px;padding:0 22px}
+
+/* ===== 底部玻璃 Tab ===== */
+.tabbar{position:absolute;z-index:20;left:12px;right:12px;bottom:calc(var(--sab) + 12px);height:70px;border-radius:var(--r-bar);display:flex;padding:6px;
+  transform-origin:50% 100%;transition:transform 260ms var(--spring-smooth)}
+.tabbar.enter{animation:barIn 300ms var(--spring-snappy) 120ms both}
+@keyframes barIn{from{transform:translateY(130%)}to{transform:none}}
+.tabbar.shrink{transform:scale(.86) translateY(6px)}
+.tabbar .cap{position:absolute;top:6px;bottom:6px;left:6px;border-radius:26px;background:rgba(232,137,12,.16);border:1px solid rgba(232,137,12,.35)}
+.tab{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--tx2);font-size:11.5px;font-weight:600;
+  transition:transform 320ms var(--spring-snappy)}
+.tab:active{transform:scale(.94);transition-duration:120ms;transition-timing-function:var(--ease-out)}
+.tab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tab .lbl{transition:opacity 260ms var(--spring-smooth)}
+.tabbar.shrink .lbl{opacity:0}
+.tab.on{color:var(--accent)}
+.tab .ico.pop{animation:icoPop 320ms var(--spring-snappy)}
+@keyframes icoPop{0%{transform:scale(1)}45%{transform:scale(1.12)}100%{transform:scale(1)}}
+
+/* ===== 二级页（工具） ===== */
+.sub{position:absolute;inset:0;z-index:30;background:var(--bg);display:none;overflow:hidden}
+.sub.open{display:block}
+.sub .sub-scroll{position:absolute;inset:0;overflow-y:auto;padding:calc(var(--sat) + 76px) 16px calc(40px + var(--sab))}
+.sub .topbar .tb-title{opacity:1}
+.sub.push{animation:pushIn 360ms var(--spring-smooth) both}
+@keyframes pushIn{from{transform:translateX(100%)}to{transform:none}}
+.sub.pop{animation:pushOut 300ms var(--spring-smooth) both}
+@keyframes pushOut{from{transform:none}to{transform:translateX(100%)}}
+.hint{font-size:12.5px;color:var(--tx2);margin:8px 4px}
+.foot{text-align:center;font-size:12px;color:var(--tx3);margin:16px 0}
+/* 账本 */
+.budget-summary{padding:20px;border-radius:22px;background:linear-gradient(135deg,#FFF3E0,#FFFFFF 70%);border:1px solid rgba(232,137,12,.25)}
+.bs-lab{font-size:13px;color:var(--tx2)}.bs-num{font-size:34px;font-weight:800;color:var(--accent-ink)}.bs-num small{font-size:18px}
+.record-btn{margin:12px 0;text-align:center;padding:13px;border-radius:999px;background:var(--amber);color:#fff;font-weight:800;transition:transform 280ms var(--spring-snappy)}
+.record-btn:active{transform:scale(.97);transition-duration:120ms}
+.group-label{font-size:13px;color:var(--tx2);margin:14px 6px 8px}
+.glist{background:var(--card);border:1px solid var(--line);border-radius:22px;overflow:hidden}
+.grow{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.grow:last-child{border-bottom:0}
+.grow-main{flex:1;min-width:0}.grow-title{font-size:15px;font-weight:600}.grow-sub{font-size:12.5px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grow-right{display:flex;align-items:center;gap:8px;flex:none}
+.cat-amt{color:var(--accent-ink)}
+.cat-bar{height:5px;border-radius:4px;background:var(--card2);margin-top:8px;overflow:hidden}.cat-bar i{display:block;height:100%;background:var(--amber);transform-origin:left}
+.day-tag{font-size:11.5px;font-weight:800;color:var(--accent-ink);margin-right:6px}
+.nbtn{font-size:12px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--card2);white-space:nowrap}
+.nbtn.pri{border-color:rgba(232,137,12,.5);color:var(--accent-ink)}
+#navList .grow{flex-wrap:wrap}
+#routeMap{height:320px;border-radius:22px;overflow:hidden;background:#EEF0F4}
+.overview-legs{display:flex;gap:8px;overflow-x:auto;margin:10px -16px 4px;padding:0 16px 4px;scrollbar-width:none}
+.overview-legs::-webkit-scrollbar{display:none}
+.overview-leg{flex:none;padding:8px 12px;border-radius:16px;background:var(--card);border:1px solid var(--line);font-size:12px;cursor:pointer}
+.overview-leg b{display:block;color:var(--accent-ink)}.overview-leg strong{display:block;font-size:13px}.overview-leg span{color:var(--tx2)}
+.overview-leg.active{border-color:rgba(232,137,12,.6);background:rgba(232,137,12,.12)}
+.route-label{background:rgba(255,255,255,.94);color:#1D1D1F;border:.5px solid rgba(0,0,0,.1);border-radius:8px;box-shadow:none;font-weight:700}
+.route-label::before{display:none}
+/* 预订 */
+.ticket-upload{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:20px;background:var(--card);border:1px dashed rgba(232,137,12,.4);margin-bottom:12px}
+.ticket-upload label{flex:1;font-weight:700;font-size:14.5px}.ticket-upload label small{display:block;font-weight:400;font-size:12px;color:var(--tx2)}
+.ticket-upload input{display:none}#ticketStatus{font-size:12px;color:var(--accent-ink)}
+.seg-tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding:5px 0;scrollbar-width:none}
+.seg-tab{flex:none;min-height:44px;display:flex;align-items:center;padding:6px 14px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:13px;cursor:pointer}
+.seg-tab.active{background:rgba(232,137,12,.15);border-color:rgba(232,137,12,.55);color:var(--accent-ink)}
+.order-card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:14px 16px;margin-bottom:12px}
+.oc-head{display:flex;justify-content:space-between;font-size:12.5px;color:var(--tx2)}
+.oc-type{display:flex;align-items:center;gap:6px}.oc-status{color:#1E7E34}
+.oc-main{display:flex;justify-content:space-between;gap:12px;margin-top:8px}
+.route,.oc-title{font-size:16px;font-weight:700}.arrow{color:var(--accent-ink)}
+.flight-badge{font-size:11px;padding:1px 7px;border-radius:999px;background:rgba(232,137,12,.15);color:var(--accent-ink)}
+.oc-sub,.oc-desc{font-size:12.5px;color:var(--tx2);margin-top:2px}
+.oc-price{text-align:right;flex:none}.oc-price .amt{font-weight:800;color:var(--accent-ink)}.oc-price .cap{font-size:11px;color:var(--tx3)}
+.oc-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;justify-content:flex-end}
+.obtn{font-size:12px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--card2)}
+/* 天气 */
+.wx-search{display:flex;gap:8px}.wx-search input{flex:1}
+.wx-refresh{display:flex;align-items:center;justify-content:center;gap:6px;margin:12px 0;font-size:13px;color:var(--accent-ink);cursor:pointer}
+@keyframes wxspin{to{transform:rotate(360deg)}}#wxSpin{display:inline-block}
+.wx-card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px;margin-bottom:12px}
+.wx-remove{position:absolute;top:10px;right:12px;color:var(--tx3);font-size:13px}
+.wx-top{display:flex;align-items:center;gap:12px}.wx-ico{font-size:32px}
+.wx-city{font-weight:700}.wx-desc{font-size:12px;color:var(--tx2)}
+.wx-temp{margin-left:auto;font-size:24px;font-weight:800;color:var(--accent-ink);padding-right:18px}
+.wx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.wx-cell{background:var(--card2);border-radius:12px;padding:8px;text-align:center}.wx-cell .k{font-size:11px;color:var(--tx2)}.wx-cell .v{font-size:13px;font-weight:700}
+.wx-live{font-size:11.5px;color:var(--tx3);margin-top:8px}
+/* 汇率 */
+.fx-card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px}
+.fx-row{display:flex;gap:8px;margin-bottom:10px}.fx-row input{flex:1}.fx-row select{flex:none;width:44%}
+.fx-result{font-size:18px;font-weight:800;color:var(--accent-ink);margin:6px 0}
+.fx-note{font-size:12px;color:var(--tx2)}
+/* 弹层（实色，避免超过 2 层玻璃） */
+.modal-mask{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.28);display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity 220ms var(--ease-out)}
+.modal-mask.show{opacity:1;pointer-events:auto}
+.modal-card{width:100%;max-height:82vh;overflow-y:auto;background:#FFFFFF;border-top:.5px solid rgba(0,0,0,.06);box-shadow:0 -8px 28px rgba(0,0,0,.10);border-radius:28px 28px 0 0;padding:18px 16px calc(24px + var(--sab));
+  transform:translateY(100%);transition:transform 360ms var(--spring-smooth)}
+.modal-mask.show .modal-card{transform:none}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.modal-head h3{font-size:17px}.modal-x{width:32px;height:32px;border-radius:50%;background:var(--card2);display:grid;place-items:center;cursor:pointer}
+.cat-title-wrap{display:flex;align-items:center;gap:6px}.cat-edit-btn{color:var(--tx2)}
+.cat-title-editor{display:flex;gap:8px}
+.mi-row{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--line)}
+.mi-n{flex:1;min-width:0}.mi-p{color:var(--accent-ink);font-weight:700}.mi-edit,.mi-del{color:var(--tx2);cursor:pointer;padding:0 4px}
+.mi-edit-fields{display:flex;gap:6px;width:100%}.mi-edit-name{flex:1}.mi-edit-price{width:90px}
+.add-row{display:flex;gap:8px;margin-top:10px}.add-row input{flex:1}.add-row select{flex:1}
+.toast{position:fixed;z-index:80;left:50%;top:calc(var(--sat) + 70px);transform:translate(-50%,-10px);opacity:0;pointer-events:none;background:rgba(255,255,255,.94);border:.5px solid rgba(0,0,0,.08);box-shadow:0 8px 28px rgba(0,0,0,.12);color:var(--tx);padding:9px 16px;border-radius:999px;font-size:13.5px;transition:opacity 200ms,transform 320ms var(--spring-snappy);max-width:86vw;text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.flip-ghost{position:fixed;z-index:50;left:0;top:0;object-fit:cover;transform-origin:0 0;pointer-events:none}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:150ms!important;animation-delay:0ms!important;transition-duration:150ms!important}
+  .pane.enter,.scene-in .scene-body,.scene-in .hero .ht{animation-name:fadeOnly!important}
+  .tabbar.enter{animation-name:fadeOnly!important}
+  @keyframes fadeOnly{from{opacity:0}to{opacity:1}}
+}
+
+/* UI-FIX-1.2.1 */
+#sceneTop{background:none!important;-webkit-backdrop-filter:none;backdrop-filter:none;border:0;box-shadow:none}
+#sceneTop .icon-btn{width:40px;height:40px;border-radius:50%}
+#sceneTop .tb-title{opacity:0;transition:opacity .2s}#sceneTop.solid .tb-title{opacity:1}
+#scene .hero{transition:height 320ms var(--spring-smooth)}
+#scene[data-tab]:not([data-tab="overview"]) .hero{height:calc(120px + var(--sat))}
+#scene[data-tab]:not([data-tab="overview"]) .hero .hd,#scene[data-tab]:not([data-tab="overview"]) .status-pill{display:none}
+.scard.is-ph{height:150px;background:linear-gradient(135deg,#FFFFFF,#FFF3E0)}.scard.is-ph .cov.ph{background:none}.scard.is-ph .ring,.ph-icon{display:none}
+.daybar{scroll-snap-type:x mandatory;scroll-padding:0 16px}.dchip{scroll-snap-align:start}
+.dchip.on{box-shadow:none}
+.tool-icon{width:36px;height:36px;border-radius:10px;background:var(--accent-soft);color:var(--accent-ink);display:grid!important;place-items:center;flex:none;font-size:0}
+.tool-icon svg{width:20px;height:20px;stroke-width:1.75}
+.cat-card.empty .cat-amt{color:var(--text-3)}.cat-card.empty .cat-bar{opacity:.3}
+.record-btn{background:rgba(232,137,12,.16);color:var(--accent-ink);border:1px solid rgba(232,137,12,.45)}
+.footer-note{padding:12px 20px;color:var(--text-2);font-size:12px;text-align:center}
+.pane,.sub-body{padding-bottom:calc(64px + 28px + var(--sab))}
+
+/* ===== 1.2.2：全局玻璃底栏（常驻） + 场景分段控件 ===== */
+.gnav{position:fixed;z-index:58;left:12px;right:12px;bottom:calc(var(--sab) + 12px);height:66px;border-radius:var(--r-bar);display:flex;padding:6px;gap:4px}
+.gtab{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--tx2);font-size:11.5px;font-weight:600;border-radius:26px;border:1px solid transparent;transition:transform 320ms var(--spring-snappy),background 200ms}
+.gtab:active{transform:scale(.94);transition-duration:120ms}
+.gtab svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.gtab.on{color:var(--accent);background:rgba(232,137,12,.16);border-color:rgba(232,137,12,.35)}
+.tabbar{position:sticky;top:calc(var(--sat) + 66px);left:auto;right:auto;bottom:auto;margin:-4px 16px 6px;height:48px;border-radius:999px;padding:6px;z-index:15;
+  background:rgba(255,255,255,.94);border:.5px solid rgba(0,0,0,.06);box-shadow:0 8px 28px rgba(0,0,0,.10);transform:none!important;animation:none!important}
+.tabbar .cap{border-radius:999px}
+.tabbar .tab{flex-direction:row;gap:4px;font-size:13px}
+.tabbar .tab svg{width:16px;height:16px}
+.tabbar.shrink .lbl{opacity:1}
+.home-wrap{padding-bottom:calc(112px + var(--sab))}
+.sub .sub-scroll{padding-bottom:calc(112px + var(--sab))}
+.scene-body{padding-bottom:calc(112px + var(--sab))}
+.pane,.sub-body{padding-bottom:0}
+.modal-mask{z-index:70}.toast{z-index:90}
+.hero img{object-position:center 45%}
+.scard .cov{object-position:center 55%}
+.dthumb,.dayhead img,.fthumb{object-position:center;background:linear-gradient(135deg,#F2F2F7,#FFF3E0)}
+.dayhead{position:relative}
+.favbtn{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:999px;display:grid;place-items:center;background:rgba(255,255,255,.72);border:.5px solid rgba(255,255,255,.7);color:var(--text-1);font-size:17px;line-height:1}
+.favbtn.on,.icon-btn.on{color:var(--accent-ink)}
+.food{position:relative}.food h4{padding-right:40px}.food .favbtn{top:12px;right:12px}
+.gpage{display:none;z-index:50}.gpage.open{display:block}
+.gp-wrap{padding:calc(var(--sat) + 18px) 16px calc(112px + var(--sab))}
+.gp-h{font-size:28px;font-weight:800;padding:6px 4px 4px}.gp-sub{font-size:13px;color:var(--tx2);padding:0 4px 14px}
+.frow{display:flex;align-items:center;gap:12px;padding:10px;margin-bottom:10px}
+.frow img{flex:none;width:72px;height:56px;border-radius:14px;object-fit:cover;object-position:center}
+.frow .fm{flex:1;min-width:0}.frow .fm b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.frow .fm span{font-size:12.5px;color:var(--tx2)}
+.frow .ficon{flex:none;width:72px;height:56px;border-radius:14px;display:grid;place-items:center;font-size:24px;background:linear-gradient(135deg,#F2F2F7,#FFF3E0)}
+.mrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);font-size:14.5px}
+.mrow:last-child{border-bottom:0}.mrow span{color:var(--tx2);font-size:13px}
+.credits{font-size:11.5px;line-height:1.6;color:var(--tx2);padding:14px 16px;word-break:break-all}
+.credits div{margin-bottom:6px}
+.srcs{padding:12px 16px}.srcs a{display:block;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--accent-ink)}.srcs a:last-child{border-bottom:0}.srcnote{font-size:12px;color:var(--tx2);margin-bottom:4px}
+
+/* ===== 1.2.3 修复 ===== */
+#scene .hero{transition:none}
+.dchip{transition:transform 280ms var(--spring-snappy)}
+#sceneTop.solid{background:rgba(255,255,255,.94)!important;border:.5px solid rgba(0,0,0,.06);box-shadow:0 8px 28px rgba(0,0,0,.10)}
+#sceneTop .icon-btn.glass{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(255,255,255,.72);color:var(--text-1)}
+/* 点击区 ≥44×44（视觉不变，伪元素扩展） */
+.hit,.tabbar .tab,.dchip,.obtn,.nbtn,.navbtn,.seg-tab,.favbtn,#sceneTop .icon-btn,.sub .topbar .icon-btn,.sec-h small,.overview-leg,.cat-edit-btn,.modal-x,.mi-edit,.mi-del,.frow .icon-btn{position:relative}
+.favbtn{position:absolute}
+.tabbar .tab::after,.dchip::after,.obtn::after,.nbtn::after,.navbtn::after,.seg-tab::after,.favbtn::after,#sceneTop .icon-btn::after,.sub .topbar .icon-btn::after,.sec-h small::after,.cat-edit-btn::after,.modal-x::after,.mi-edit::after,.mi-del::after,.frow .icon-btn::after{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+.wx-remove{width:44px;height:44px;top:0;right:0;display:grid;place-items:center;font-size:15px}
+.wx-refresh{min-height:44px;margin:4px 0}
+.leaflet-control-zoom a{width:44px!important;height:44px!important;line-height:44px!important;font-size:20px!important}
+.ring.zero{display:none}
+.add-btn{background:rgba(232,137,12,.16);border:1px solid rgba(232,137,12,.45);color:var(--accent-ink);box-shadow:none}
+.cat-card .grow-main,.cat-card .grow-title{text-align:left}
+.dmain b,.dmain span,.grow-sub{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.li{display:inline-block;width:1em;height:1em;vertical-align:-.14em;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.wx-ico{color:var(--accent-ink);width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:var(--accent-soft)}.wx-ico .li{width:26px;height:26px}
+.stay .si{color:var(--accent-ink)}.frow .ficon{color:var(--accent-ink)}.type-ico{color:var(--accent-ink)}
+.empty-orders{padding:28px 20px;text-align:center}.empty-orders p{font-size:13px;color:var(--tx2);margin-top:6px}
+.hero::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:24px;background:linear-gradient(180deg,rgba(245,245,247,0),var(--bg));pointer-events:none;z-index:1}
+.tabbar .cap,.gtab.on{background:var(--accent-soft)!important}
+.tab.on .lbl,.gtab.on span{color:var(--accent-ink)}
+.tab.on,.gtab.on,.tab.on .lbl,.gtab.on span{color:var(--accent-ink)!important}
+#sceneTop .icon-btn.glass,.favbtn{background:rgba(255,255,255,.92)!important;border:.5px solid rgba(0,0,0,.08)!important;color:var(--text-1)!important;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+#sceneTop .icon-btn.glass.on,.favbtn.on{color:var(--accent-ink)!important}
+
+/* ===== 7.1 悬浮玻璃导航（覆盖前文） ===== */
+:root{--accent-strong:#8A4F00;--nav-h:62px;--nav-pad:calc(62px + 12px + var(--sab) + 20px)}
+.glass{background:rgba(255,255,255,.72);
+  backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
+  border:.5px solid rgba(0,0,0,.08);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 -.5px 0 rgba(0,0,0,.04),0 2px 6px rgba(0,0,0,.04),0 10px 32px rgba(0,0,0,.10)}
+.glass::before{display:none}
+.glass:active{transform:scale(.94);transition:transform 120ms}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){ .glass{background:rgba(255,255,255,.94)} }
+/* 底栏 */
+.gnav{left:16px;right:16px;bottom:calc(12px + var(--sab));height:62px;border-radius:31px;padding:0 6px;gap:0;align-items:center;justify-content:space-around}
+.gtab{height:50px;border-radius:25px;border:0!important;color:rgba(60,60,67,.76)!important;font-size:10px;font-weight:600}
+.gtab span{color:inherit!important}
+.gtab.on{background:rgba(0,0,0,.05)!important;color:var(--accent-strong)!important}
+.gtab.on span{color:var(--accent-strong)!important}
+/* 顶栏 */
+.topbar,#sceneTop,#sceneTop.solid{position:absolute;z-index:20;top:calc(8px + var(--sat));left:16px;right:16px;height:44px;padding:0;gap:0;border-radius:0;
+  display:flex;align-items:center;justify-content:space-between;pointer-events:none;
+  background:none!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.topbar>*{pointer-events:auto}
+.topbar .circle,#sceneTop .icon-btn.glass,#sceneTop .icon-btn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#1D1D1F!important;flex:none;
+  background:rgba(255,255,255,.72)!important;backdrop-filter:blur(20px) saturate(180%)!important;-webkit-backdrop-filter:blur(20px) saturate(180%)!important;
+  border:.5px solid rgba(0,0,0,.08)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 -.5px 0 rgba(0,0,0,.04),0 2px 6px rgba(0,0,0,.04),0 10px 32px rgba(0,0,0,.10)!important}
+#sceneTop .icon-btn.on{color:var(--accent-strong)!important}
+.topbar .circle svg{width:22px;height:22px;stroke-width:2.2}
+.topbar .circle-spacer{width:44px;height:44px;flex:none;pointer-events:none}
+.topbar .title-pill,.topbar .tb-title.title-pill{position:absolute;left:50%;transform:translateX(-50%);flex:none;
+  height:40px;padding:0 16px;border-radius:20px;max-width:56%;display:block;line-height:40px;
+  font:600 16px/40px system-ui,-apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif;color:#1D1D1F;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .26s cubic-bezier(.32,.72,0,1)}
+.sub .topbar .title-pill{opacity:1;pointer-events:auto}
+#sceneTop.solid .title-pill,#scene[data-tab]:not([data-tab="overview"]) #sceneTop .title-pill{opacity:1;pointer-events:auto}
+#sceneTopTitle:empty{display:none}
+/* 内容留白 */
+.home-wrap,.gp-wrap{padding-bottom:var(--nav-pad)!important}
+.sub .sub-scroll{padding-top:calc(var(--sat) + 8px + 44px + 14px)!important;padding-bottom:var(--nav-pad)!important}
+.scene-body{padding-bottom:var(--nav-pad)!important}
+.tabbar{top:calc(var(--sat) + 8px + 44px + 8px)}
+
+/* L-01/L-03 图上白字局部遮罩 */
+.hero .shade,.scard .shade{background:linear-gradient(0deg,rgba(0,0,0,.55),rgba(0,0,0,0) 70%),linear-gradient(180deg,rgba(0,0,0,.18) 0%,rgba(0,0,0,0) 20%),linear-gradient(0deg,rgba(0,0,0,.62) 0%,rgba(0,0,0,.25) 35%,rgba(0,0,0,0) 60%)!important}
+.hero .ht,.hero h1,.hero .hd,.scard h2,.scard .meta,.scard .chip,.status-pill{text-shadow:0 1px 8px rgba(0,0,0,.35)!important}
+.scard .meta{color:#fff!important}
+.scard .chip,.status-pill{background:rgba(0,0,0,.42)!important}
+.hero .ht{will-change:opacity}
+/* L-04 底栏在照片上也要 ≥4.5 */
+.gnav.glass{background:rgba(255,255,255,.9)}
+#scene[data-tab]:not([data-tab="overview"]) .hero .ht{visibility:hidden}
+.scard .shade{background:linear-gradient(0deg,rgba(0,0,0,.55),rgba(0,0,0,0) 70%),linear-gradient(180deg,rgba(0,0,0,.18) 0%,rgba(0,0,0,0) 20%),linear-gradient(0deg,rgba(0,0,0,.72) 0%,rgba(0,0,0,.35) 40%,rgba(0,0,0,0) 65%)!important}
+/* 1.2.7 L-03: 所有首页卡片都有遮罩，图未加载时底色也够深 */
+.scard{background:#5B616B}
+.scard .shade{z-index:1}
+.scard .info{z-index:2}
+.scard .info::before{content:"";position:absolute;left:-18px;right:-96px;bottom:-16px;height:calc(100% + 56px);z-index:-1;pointer-events:none;background:linear-gradient(0deg,rgba(0,0,0,.55),rgba(0,0,0,0) 70%)}
+.scard h2,.scard .meta,.scard .chip{color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.35)}
+.gtab{color:rgba(60,60,67,.84)!important}
+/* 1.2.8 手势 */
+#scene,.sub,.gpage,#home,#sceneScroll,.sub-scroll{touch-action:pan-y}
+.daybar,.overview-legs,.seg-tabs,[data-hscroll]{touch-action:pan-x pan-y}
+.edge-dim{position:absolute;inset:0;background:#fff;opacity:.4;pointer-events:none}
+body>.edge-dim{position:fixed}
+#sceneBody{position:relative}
+
+/* 1.2.9 添加场景 */
+.add-scene{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border:1.5px dashed rgba(232,137,12,.45);border-radius:22px;padding:16px;margin:2px 0 14px;box-shadow:var(--shadow-card);color:var(--text-1)}
+.add-scene:active{transform:scale(.98)}
+.as-plus{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-ink);font-size:22px;font-weight:700;flex:none}
+.as-t{flex:1;min-width:0}.as-t b{display:block;font-size:15.5px}.as-t small{font-size:12.5px;color:var(--text-2)}
+.ai-form{display:flex;flex-direction:column;gap:8px}
+.ai-lab{font-size:13px;color:var(--text-2);margin:6px 2px 0}
+.ai-form input,.ai-keycard input{width:100%;background:#F2F2F7;border:1px solid var(--sep);color:var(--text-1)}
+.ai-days{display:flex;flex-wrap:wrap;gap:8px}
+.ai-day{min-width:56px;height:44px;border-radius:14px;background:#F2F2F7;border:1px solid transparent;font-weight:600;color:var(--text-1)}
+.ai-day.on{background:var(--accent-soft);border-color:rgba(232,137,12,.45);color:var(--accent-ink)}
+.ai-warn{font-size:13px;color:#8A4F00;background:#FFF3E0;border-radius:12px;padding:10px 12px}.ai-warn a{text-decoration:underline;font-weight:700;cursor:pointer}
+.ai-gen{display:flex;flex-direction:column;align-items:center;gap:12px;padding:26px 8px 10px;text-align:center}
+.ai-spin{width:44px;height:44px;border-radius:50%;border:4px solid rgba(232,137,12,.18);border-top-color:#E8890C;animation:aispin 900ms linear infinite}
+@keyframes aispin{to{transform:rotate(360deg)}}
+.ai-step{font-size:15px;font-weight:600;color:var(--text-1)}
+.ai-fail{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:14px 6px 4px}
+.ai-fail-ic{width:46px;height:46px;border-radius:50%;background:#FDECEC;color:#B42318;font-weight:800;font-size:24px;display:grid;place-items:center}
+.ai-fail-msg{font-size:15px;font-weight:600;color:var(--text-1)}
+.ai-fail .record-btn{align-self:stretch}
+.ai-keyrow{display:flex;align-items:center;gap:8px;margin-top:10px}.ai-keystate{font-size:12.5px;color:var(--text-2);margin-left:auto}
+.add-btn.ghost{background:#F2F2F7!important;border-color:transparent!important;color:var(--text-1)!important}
+.gcap{position:absolute;left:6px;top:6px;height:50px;border-radius:25px;background:rgba(0,0,0,.05);pointer-events:none;z-index:0;transition:transform 320ms cubic-bezier(.32,.72,0,1)}
+.gtab.on{background:transparent!important}
+</style>
+</head>
+<body>
+<!-- ============ 首页 ============ -->
+<main class="view" id="home">
+  <div class="home-wrap">
+    <div class="home-head">
+      <div><div class="brand">随时<b>Go</b></div><div class="brand-sub">旅行手册 · 行程清单离线可看，地图与天气需联网</div></div>
+      <span class="count-pill" id="sceneCount"></span>
+    </div>
+    <div id="continueBox"></div>
+    <div id="sceneList"></div>
+    <button class="add-scene glass-card" id="addSceneBtn" onclick="openAddScene()"><span class="as-plus">＋</span><span class="as-t"><b>添加场景</b><small>输入目的地，AI 生成同样结构的攻略</small></span><span class="chev">›</span></button>
+    <div class="home-foot">更多线路持续更新中</div>
+  </div>
+</main>
+
+<!-- ============ 场景 ============ -->
+<section class="view" id="scene" aria-hidden="true">
+  <div class="topbar" id="sceneTop">
+    <button class="icon-btn circle glass" onclick="closeScene()" aria-label="返回首页"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="tb-title title-pill glass" id="sceneTopTitle"></div>
+    <button class="icon-btn circle glass" id="favSceneBtn" onclick="favScene()" aria-label="收藏场景">♡</button>
+  </div>
+  <div id="sceneScroll">
+    <div class="hero" id="sceneHero"><img id="heroImg" alt="" decoding="async" onerror="imgFb(this)"><div class="shade"></div>
+      <div class="ht"><span class="status-pill" id="heroPill"></span><h1 id="heroTitle"></h1><div class="hd" id="heroSub"></div></div></div>
+    <nav class="tabbar" id="tabbar" role="tablist">
+      <div class="cap" id="tabCap"></div>
+      <button class="tab on" data-tab="overview" onclick="switchTab('overview')"><span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg></span><span class="lbl">概览</span></button>
+      <button class="tab" data-tab="trip" onclick="switchTab('trip')"><span class="ico"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="16" cy="17" r="2"/><path d="M8 18h6M16 15l1-7M7.5 16.5L16.5 7.5"/></svg></span><span class="lbl">行程</span></button>
+      <button class="tab" data-tab="food" onclick="switchTab('food')"><span class="ico"><svg viewBox="0 0 24 24"><path d="M3 12h18a9 9 0 0 1-18 0z"/><path d="M7 21h10M8 8c0-2 2-2 2-4M12 8c0-2 2-2 2-4M16 8c0-2 2-2 2-4"/></svg></span><span class="lbl">美食</span></button>
+      <button class="tab" data-tab="list" onclick="switchTab('list')"><span class="ico"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 12l2 2 4-4"/></svg></span><span class="lbl">清单</span></button>
+      <button class="tab" data-tab="tools" onclick="switchTab('tools')"><span class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18"/></svg></span><span class="lbl">工具</span></button>
+    </nav>
+    <div class="scene-body" id="sceneBody">
+      <div class="pane on" id="pane-overview"></div>
+      <div class="pane" id="pane-trip"></div>
+      <div class="pane" id="pane-food"></div>
+      <div class="pane" id="pane-list"></div>
+      <div class="pane" id="pane-tools"></div>
+    </div>
+  </div>
+
+  <!-- 工具二级页：沿用 v2 的账本 / 地图 / 预订 / 天气 / 汇率 -->
+  <div class="sub" id="sub-budget"><div class="topbar"><button class="icon-btn circle glass" onclick="closeSub()" aria-label="返回"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div class="tb-title title-pill glass">旅行账本</div><span class="circle-spacer" aria-hidden="true"></span></div>
+    <div class="sub-scroll"><div id="budgetBox"></div></div></div>
+  <div class="sub" id="sub-map"><div class="topbar"><button class="icon-btn circle glass" onclick="closeSub()" aria-label="返回"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div class="tb-title title-pill glass">地图导航</div><span class="circle-spacer" aria-hidden="true"></span></div>
+    <div class="sub-scroll"><div id="routeMap" aria-label="路线地图"></div><div class="overview-legs" id="overviewLegs" data-hscroll></div>
+      <div class="group-label">分段导航</div><div class="glist" id="navList"></div>
+      <div class="foot">点击「高德导航」唤起导航 · 未装 APP 会自动打开网页版 <svg class="li" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg></div></div></div>
+  <div class="sub" id="sub-tickets"><div class="topbar"><button class="icon-btn circle glass" onclick="closeSub()" aria-label="返回"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div class="tb-title title-pill glass">预订票据</div><span class="circle-spacer" aria-hidden="true"></span></div>
+    <div class="sub-scroll">
+      <div class="ticket-upload"><label for="ticketImage"><svg class="li" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg> 上传票据截图<small>支持机票、酒店、火车票、门票，上传后自动识别</small></label><input id="ticketImage" type="file" accept="image/*" onchange="recognizeTicket(this.files[0])"><span id="ticketStatus">选择图片</span></div>
+      <div class="seg-tabs" data-hscroll><div class="seg-tab active" onclick="segClick(this)">全部</div><div class="seg-tab" onclick="segClick(this)">机票火车</div><div class="seg-tab" onclick="segClick(this)">酒店</div><div class="seg-tab" onclick="segClick(this)">门票</div><div class="seg-tab" onclick="segClick(this)">待点评</div></div>
+      <div id="orderList"></div><div class="foot">— 已经到底啦 —</div></div></div>
+  <div class="sub" id="sub-weather"><div class="topbar"><button class="icon-btn circle glass" onclick="closeSub()" aria-label="返回"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div class="tb-title title-pill glass">天气参考</div><span class="circle-spacer" aria-hidden="true"></span></div>
+    <div class="sub-scroll">
+      <div class="wx-search"><input id="wxQ" placeholder="搜索添加城市" onkeydown="if(event.key==='Enter')addCity()"><div class="add-btn" onclick="addCity()">添加</div></div>
+      <div class="wx-refresh" onclick="refreshWx(true)"><span id="wxSpin">↻</span><span id="wxRefTxt">刷新实时天气</span></div>
+      <div id="weatherBox"></div><div class="foot">实时数据来自 Open-Meteo · 进页自动刷新，每 10 分钟轮询 <svg class="li" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg></div></div></div>
+  <div class="sub" id="sub-fx"><div class="topbar"><button class="icon-btn circle glass" onclick="closeSub()" aria-label="返回"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div class="tb-title title-pill glass">汇率换算</div><span class="circle-spacer" aria-hidden="true"></span></div>
+    <div class="sub-scroll"><div class="fx-card">
+      <div class="fx-row"><input id="fxIn" type="number" value="100" inputmode="decimal"><select id="fxFrom"><option value="1">CNY 人民币</option><option value="7.25">USD 美元</option><option value="0.93">HKD 港币</option><option value="1.67">MYR 林吉特</option><option value="0.21">THB 泰铢</option></select></div>
+      <div class="fx-row"><input id="fxOut" type="text" readonly><select id="fxTo"><option value="1">CNY 人民币</option><option value="7.25">USD 美元</option><option value="0.93">HKD 港币</option><option value="1.67">MYR 林吉特</option><option value="0.21">THB 泰铢</option></select></div>
+      <div class="fx-result" id="fxRes">100 CNY = 100.00 CNY</div>
+      <div class="fx-note">国内行程全程人民币结算，此工具用于境外卡 / 外币换算<br>汇率为示例值，出行前可更新</div></div>
+      <div class="foot">多币种记账 · 自动同步成人民币 <svg class="li" viewBox="0 0 24 24" aria-hidden="true"><path d="m21 16-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16"/></svg></div></div></div>
+</section>
+
+<!-- ============ 收藏 / 我的 ============ -->
+<main class="view gpage" id="favView"><div class="gp-wrap"><div class="gp-h">收藏</div><div class="gp-sub">点 ♡ 收藏场景、每日行程和美食</div><div id="favBox"></div></div></main>
+<main class="view gpage" id="meView"><div class="gp-wrap"><div class="gp-h">我的</div><div class="gp-sub">设置与关于</div><div id="meBox"></div></div></main>
+
+<!-- ============ 全局玻璃底栏（常驻，不随滚动隐藏） ============ -->
+<nav class="gnav glass" id="gnav" role="tablist" aria-label="主导航"><span class="gcap" id="gCap" aria-hidden="true"></span>
+  <button class="gtab on" data-g="home" onclick="gnavGo('home')"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg><span>首页</span></button>
+  <button class="gtab" data-g="trip" onclick="gnavGo('trip')"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h5a3 3 0 0 0 0-6h-2a3 3 0 0 1 0-6h5"/></svg><span>行程</span></button>
+  <button class="gtab" data-g="fav" onclick="gnavGo('fav')"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg><span>收藏</span></button>
+  <button class="gtab" data-g="me" onclick="gnavGo('me')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>我的</span></button>
+</nav>
+
+<div class="modal-mask" id="modalMask" onclick="if(event.target===this)closeModal()"><div class="modal-card" id="modalCard"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="./vendor/leaflet/leaflet.js"></script>
+<script>
+try{ if(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()) document.documentElement.classList.add('is-native'); }catch(e){}
+const $=id=>document.getElementById(id);
+const store={
+  get(k,d){ try{ const v=localStorage.getItem('qg_'+k); return v?JSON.parse(v):d; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem('qg_'+k,JSON.stringify(v)); }catch(e){} }
+};
+function esc(s){ return String(s==null?'':s).replace(/[\p{Extended_Pictographic}\uFE0F\u200D]\s?/gu,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+let toastTimer;
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1600); }
+const REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const img1x=p=>p?p.replace(/\.png$/,'@1x.webp'):'';
+const img2x=p=>p?p.replace(/\.png$/,'@2x.webp'):'';
+const FB_IMG='images/fallback.png';
+function imgFb(el){ if(!el||el.dataset.fb) return; el.dataset.fb='1'; el.removeAttribute('srcset'); el.src=img1x(FB_IMG); el.srcset=img1x(FB_IMG)+' 1x, '+img2x(FB_IMG)+' 2x'; }
+document.addEventListener('error',e=>{ const t=e.target; if(t&&t.tagName==='IMG'&&!t.closest('.leaflet-container')) imgFb(t); },true);
+window.IMG_FOCUS=window.IMG_FOCUS||{};
+const fstyle=p=>IMG_FOCUS[p]?` style="object-position:${IMG_FOCUS[p]}"`:'';
+const srcset=p=>{ p=p||FB_IMG; return `${fstyle(p)} src="${img1x(p)}" srcset="${img1x(p)} 1x, ${img2x(p)} 2x" onerror="imgFb(this)"`; };
+
+const LI={cal:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',pin:'<path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2"/>',play:'<path d="M8 5l11 7-11 7z"/>',cam:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',swap:'<path d="m21 16-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16"/>',compass:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',temp:'<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/>',car:'<path d="M5 17h14M4 17v-4l2-5h12l2 5v4M7 17v2M17 17v2"/><circle cx="7.5" cy="13.5" r="1"/><circle cx="16.5" cy="13.5" r="1"/>',bed:'<path d="M3 18V7M3 13h18v5M21 13a3 3 0 0 0-3-3h-7v3"/><circle cx="7" cy="10.5" r="1.5"/>',map:'<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>',plane:'<path d="M10 14 3 12l1-2 7 1 4-6h2l-2 7 5 1 1 2-6 1-3 5h-2l1-5"/>',train:'<rect x="6" y="3" width="12" height="13" rx="3"/><path d="M6 10h12M9 20l-2 2M15 20l2 2M9 13h.01M15 13h.01"/>',ticket:'<path d="M3 8a2 2 0 0 0 0 4v4h18v-4a2 2 0 0 1 0-4V4H3z"/><path d="M13 4v12"/>',bowl:'<path d="M3 11h18a9 9 0 0 1-18 0zM7 20h10"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/>',cloud:'<path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 2A3 3 0 0 0 7 18z"/>',rain:'<path d="M7 15h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 2A3 3 0 0 0 7 15zM8 18l-1 3M12 18l-1 3M16 18l-1 3"/>',snow:'<path d="M7 14h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 2A3 3 0 0 0 7 14zM8 18h.01M12 20h.01M16 18h.01"/>',fog:'<path d="M4 9h16M3 13h18M5 17h14"/>',storm:'<path d="M7 14h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 2A3 3 0 0 0 7 14zM12 15l-2 4h4l-2 4"/>',mount:'<path d="M3 20 10 8l4 6 2-3 5 9z"/>',heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>'};
+const ico=n=>`<svg class="li" viewBox="0 0 24 24" aria-hidden="true">${LI[n]||''}</svg>`;
+const noEmo=t=>String(t==null?'':t).replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu,'').replace(/^\s+/,'');
+const exPlace=()=>{ const p=(typeof ROUTE_POINTS!=='undefined'&&ROUTE_POINTS[1])||null; return p?p.name:'景区'; };
+const amapSearch=k=>`https://uri.amap.com/search?keyword=${encodeURIComponent(k)}&src=suishigo&callnative=1`;
+function openExternal(url){ window.open(url,'_blank','noopener'); }
+function withWillChange(el,ms){ el.style.willChange='transform'; clearTimeout(el._wc); el._wc=setTimeout(()=>{el.style.willChange='';},ms+60); }
+
+/* ---------- 弹簧：stiffness 300, damping 26 → 预计算 linear() ---------- */
+const SPRING=(function(){ const k=300,c=26,m=1,dt=1/600; let x=0,v=0,pts=[]; const T=0.32; for(let t=0,i=0;t<=T+1e-9;t+=dt,i++){ const a=(-k*(x-1)-c*v)/m; v+=a*dt; x+=v*dt; if(i%12===0) pts.push(+x.toFixed(4)); } pts[pts.length-1]=1; return pts; })();
+const LINEAR_OK=(()=>{ try{ return CSS.supports('transition-timing-function','linear(0, 1)'); }catch(e){ return false; } })();
+const SPRING_EASE=LINEAR_OK?`linear(0, ${SPRING.join(', ')})`:'cubic-bezier(.34,1.3,.64,1)';
+
+/* ---------- 数据 ---------- */
+let INDEX=[], SCENE=null, SCENE_META=null;
+const TIPS=[
+  ['🎫 必须提前预约','莫高窟正常票（8窟+数字电影）需在「莫高窟参观预约网」抢，旺季提前 7-15 天；抢不到可买 B 类应急票（4窟）。茶卡盐湖、七彩丹霞可现场购票。'],
+  ['🚗 交通建议','环线公共交通不便，推荐西宁包车 / 拼车（4人拼车人均约 ¥500-700/天）或自驾租车（SUV 约 ¥300-400/天）。单日车程最长 500km+。'],
+  ['🎒 高原与沙漠装备','9月底青海湖海拔 3200m，早晚仅 3-8℃，羽绒服必带；敦煌白天 25℃+ 紫外线极强，防晒霜+墨镜+魔术头巾；盐湖下水备拖鞋和防水手机袋。'],
+  ['🌡️ 一天过四季','青海湖清晨看日出要穿冬装，中午茶卡盐湖短袖即可，夜晚敦煌沙漠星空又要加外套。行李按"洋葱式穿法"打包。']
+];
+const OVERVIEW_TEXT={'qinggan-loop':'7天6晚 · 青甘大环线自驾路线，湖泊、盐湖、戈壁、石窟与丹霞一次串联。'};
+const SCENE_CACHE={};
+async function loadJSON(u){ const r=await fetch(u); if(!r.ok) throw new Error(u); return r.json(); }
+
+/* 清单存储：青甘沿用 v2 的 qg_cl 键，保证覆盖安装后勾选不丢 */
+const clKey=id=>id==='qinggan-loop'?'cl':'cl_'+id;
+function getChecklist(id,def){ return store.get(clKey(id),null) || JSON.parse(JSON.stringify(def||[])); }
+function clProgress(list){ let t=0,d=0; (list||[]).forEach(g=>g.items.forEach(i=>{t++; if(i.done)d++;})); return {t,d,p:t?Math.round(d*100/t):0}; }
+
+/* ---------- 首页 ---------- */
+function ringSVG(p){ const r=28,C=2*Math.PI*r; return `<svg viewBox="0 0 66 66"><circle cx="33" cy="33" r="${r}" fill="rgba(0,0,0,.28)" stroke="rgba(255,255,255,.3)" stroke-width="5"/><circle cx="33" cy="33" r="${r}" fill="none" stroke="#E8890C" stroke-width="5" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C*(1-p/100)).toFixed(1)}"/></svg><div class="rt">${p}%</div>`; }
+function renderHome(){
+  $('sceneCount').textContent=INDEX.length+' 个场景';
+  $('sceneList').innerHTML=INDEX.map((s,i)=>{
+    if(s.status==='placeholder') return `<a class="scard is-ph" href="#" data-i="${i}" onclick="event.preventDefault();openScene(${i},this)"><div class="cov ph"></div><div class="shade"></div><span class="ph-badge">示例待填内容</span><div class="info"><h2>${esc(s.title)}</h2><div class="meta">内容待补充</div></div></a>`;
+    const sc=SCENE_CACHE[s.id]; const pr=clProgress(getChecklist(s.id,sc&&sc.checklist));
+    return `<a class="scard" href="#" data-i="${i}" onclick="event.preventDefault();openScene(${i},this)"><img class="cov" ${srcset(s.cover)} alt="" decoding="async"><div class="shade"></div><div class="info"><h2>${esc(s.title)}</h2><div class="meta">${ico('cal')} ${esc(s.days)}</div><div class="chips">${s.cities.map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</div></div><div class="ring ${pr.p?'':'zero'}">${ringSVG(pr.p)}</div></a>`;
+  }).join('');
+  const last=store.get('lastScene',null), li=INDEX.findIndex(s=>s.id===last);
+  $('continueBox').innerHTML= li>=0 ? `<div class="continue" onclick="openScene(${li},document.querySelector('.scard[data-i=&quot;${li}&quot;]'))"><span class="ci">${ico('play')}</span><span class="ct"><small>继续浏览</small><b>${esc(INDEX[li].title)}${INDEX[li].days?' · '+esc(INDEX[li].days):''}</b></span><span class="chev">›</span></div>` : '';
+}
+
+/* ---------- 进入 / 返回场景（FLIP 共享元素） ---------- */
+let curIdx=-1, curTab='overview', originCard=null, sceneOpen=false;
+async function openScene(i,cardEl){ { const ht=document.querySelector('#sceneHero .ht'); if(ht) ht.style.opacity=''; }
+  if(sceneOpen) return;
+  const meta=INDEX[i]; SCENE_META=meta; curIdx=i; originCard=cardEl||null;
+  if(meta.status!=='placeholder' && !SCENE_CACHE[meta.id]){ try{ SCENE_CACHE[meta.id]=await loadSceneData(meta); }catch(e){ toast('场景数据加载失败'); return; } }
+  SCENE=SCENE_CACHE[meta.id]||null;
+  store.set('lastScene',meta.id);
+  buildScene();
+  const sc=$('scene'); sc.classList.add('open'); sc.setAttribute('aria-hidden','false'); sceneOpen=true;
+  $('sceneScroll').scrollTop=0; $('tabbar').classList.remove('shrink');
+  switchTab('overview',true);
+  sc.classList.remove('scene-in'); void sc.offsetWidth; sc.classList.add('scene-in');
+  const bar=$('tabbar'); bar.classList.remove('enter'); void bar.offsetWidth; bar.classList.add('enter');
+  setTimeout(()=>{ sc.classList.remove('scene-in'); bar.classList.remove('enter'); },460);
+  flip(cardEl, $('sceneHero'), false);
+  updateFavBtn(); updateGnav();
+}
+function flip(fromEl,toEl,reverse,done){
+  const hero=$('sceneHero');
+  if(!fromEl||REDUCED){ const sc=$('scene'); sc.animate([{opacity:reverse?1:0},{opacity:reverse?0:1}],{duration:150,fill:'none'}).onfinish=()=>done&&done(); return; }
+  const a=fromEl.getBoundingClientRect(), b=hero.getBoundingClientRect();
+  const sx=a.width/b.width, sy=a.height/b.height, tx=a.left-b.left, ty=a.top-b.top;
+  const cardT=`translate(${tx}px,${ty}px) scale(${sx},${sy})`, full='translate(0,0) scale(1,1)';
+  const sc=$('scene'), body=$('sceneBody');
+  hero.style.transformOrigin='0 0'; withWillChange(hero,reverse?360:420);
+  const dur=reverse?360:420, ease='cubic-bezier(.32,.72,0,1)';
+  const h=hero.animate([{transform:reverse?full:cardT,borderRadius:'0px'},{transform:reverse?cardT:full}],{duration:dur,easing:ease});
+  /* 场景底色淡入淡出，只动 opacity */
+  sc.style.background='transparent';
+  const bgLayer=sc._bg||(sc._bg=Object.assign(document.createElement('div'),{style:'position:absolute;inset:0;background:#F5F5F7;z-index:-1;pointer-events:none'}));
+  if(!bgLayer.parentNode) sc.prepend(bgLayer);
+  bgLayer.animate([{opacity:reverse?1:0},{opacity:reverse?0:1}],{duration:dur,easing:ease,fill:'forwards'});
+  if(reverse){ body.animate([{opacity:1},{opacity:0}],{duration:160,fill:'forwards'}); $('tabbar').animate([{opacity:1},{opacity:0}],{duration:160,fill:'forwards'}); $('sceneTop').animate([{opacity:1},{opacity:0}],{duration:160,fill:'forwards'}); hero.querySelector('.ht').animate([{opacity:1},{opacity:0}],{duration:140,fill:'forwards'}); }
+  h.onfinish=()=>{ hero.style.transformOrigin=''; sc.style.background=''; if(done) done(); if(!reverse) bgLayer.getAnimations().forEach(x=>x.cancel()); };
+}
+function resetSceneAnims(){ const sc=$('scene'); sc.getAnimations({subtree:true}).forEach(a=>a.cancel()); sc.style.transform=''; }
+function closeScene(){
+  if(!sceneOpen) return;
+  if(document.querySelector('.sub.open')){ closeSub(); }
+  renderHome();
+  const card=document.querySelector(`.scard[data-i="${curIdx}"]`);
+  const finish=()=>{ const sc=$('scene'); sc.classList.remove('open'); sc.setAttribute('aria-hidden','true'); resetSceneAnims(); sceneOpen=false; updateGnav(); };
+  $('sceneScroll').scrollTop=0;
+  if(card){ const r=card.getBoundingClientRect(); if(r.bottom<0||r.top>innerHeight) card.scrollIntoView({block:'center'}); }
+  flip(card,$('sceneHero'),true,finish);
+}
+
+/* ---------- 构建场景内容 ---------- */
+function buildScene(){
+  const m=SCENE_META, s=SCENE;
+  $('sceneTopTitle').textContent=m.title+(m.days?' · '+m.days:'');
+  $('heroTitle').textContent=m.title+(m.days?' · '+m.days:'');
+  const hi=$('heroImg');
+  delete hi.dataset.fb;
+  if(m.cover||true){ const cv=m.cover||FB_IMG; hi.src=img1x(cv); hi.srcset=img1x(cv)+' 1x, '+img2x(cv)+' 2x'; hi.style.objectPosition=IMG_FOCUS[cv]||''; hi.style.display=''; $('sceneHero').style.background=''; }
+  else if(0){ hi.src=img1x(m.cover); hi.srcset=img1x(m.cover)+' 1x, '+img2x(m.cover)+' 2x'; hi.style.display=''; $('sceneHero').style.background=''; }
+  else { hi.removeAttribute('src'); hi.removeAttribute('srcset'); hi.style.display='none'; $('sceneHero').style.background='radial-gradient(120% 90% at 80% 0%,#FFF3E0 0%,#F2F2F7 55%,#E5E5EA 100%)'; }
+  if(!s){
+    $('heroPill').textContent='示例待填内容'; $('heroSub').textContent='内容待补充';
+    const empty=(ico,t)=>`<div class="card empty"><div class="ei">${ico}</div><h3>${t}暂未填写</h3><p>「${esc(m.title)}」是示例场景，还没有${t}内容。<br>新增场景内容：加一个 JSON 文件，再在 index 里加一行，然后重新打包。</p><div class="add-btn" onclick="closeScene()">返回首页</div></div>`;
+    $('pane-overview').innerHTML=empty('🧭','概览'); $('pane-trip').innerHTML=empty('🗺️','行程');
+    $('pane-food').innerHTML=empty('🍜','美食'); $('pane-list').innerHTML=empty('✅','清单'); $('pane-tools').innerHTML=empty('🧰','工具');
+    return;
+  }
+  const t=s.trips&&s.trips[0];
+  $('heroPill').textContent=t?statusOf(t):'行程';
+  $('heroSub').textContent=t?`${t.start.slice(5).replace('-','/')} - ${t.end.slice(5).replace('-','/')} · ${t.fromCity}出发`:'';
+  (s.routePoints||[]).forEach(p=>{ if(p.pos&&p.pos[0]>p.pos[1]) p.pos=[p.pos[1],p.pos[0]]; });
+  if(!s.dayRouteIndex||!s.dayRouteIndex.all) s.dayRouteIndex=Object.assign({all:(s.routePoints||[]).map((_,i)=>i)},s.dayRouteIndex||{});
+  (s.days||[]).forEach(d=>{ if(d&&d.img&&d.focus) IMG_FOCUS[d.img]=d.focus; });
+  DAYS=s.days||[]; ROUTE_POINTS=s.routePoints||[]; DAY_ROUTE_INDEX=s.dayRouteIndex;
+  CLS=getChecklist(m.id,s.checklist);
+  CUR_SCENE=m.id; CATS=(store.get(catKey(m.id),null)||(m.id==='qinggan-loop'?JSON.parse(JSON.stringify(QG_CATS_DEFAULT)):JSON.parse(JSON.stringify(s.budget||[{name:'🚗 交通',amt:0,items:[]},{name:'🏨 住宿',amt:0,items:[]},{name:'🎫 门票',amt:0,items:[]},{name:'🍜 餐饮',amt:0,items:[]},{name:'🛍 其他',amt:0,items:[]}]))));CATS.forEach(c=>c.name=noEmo(c.name));
+  (CATS||[]).forEach(c=>{if(c){c.name=noEmo(c.name);(c.items||[]).forEach(i=>{if(i&&i.n)i.n=noEmo(i.n);});}});
+  ORDERS=m.id==='qinggan-loop'?QG_ORDERS:(s.orders||[]); renderBudget(); renderOrders();
+  CITIES=loadCities(m.id); renderWeather(); $('wxQ').placeholder='搜索添加城市，如：'+((m.cities||[]).slice(-2).join(' / ')||'兰州'); orderFilter='全部'; document.querySelectorAll('#sub-tickets .seg-tab').forEach((t,k)=>t.classList.toggle('active',k===0));
+  renderOverviewPane(); renderTripPane(0); renderNav(); renderFoodPane(); renderChecklist(); renderToolsPane();
+}
+function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function statusOf(t){ const n=ymd(new Date()); return n<t.start?'未出发':n>t.end?'已结束':'进行中'; }
+
+function routeSVG(){
+  const pts=ROUTE_POINTS, W=380, H=230, pad=40;
+  const lats=pts.map(p=>p.pos[0]), lngs=pts.map(p=>p.pos[1]);
+  const minLa=Math.min(...lats), maxLa=Math.max(...lats), minLo=Math.min(...lngs), maxLo=Math.max(...lngs);
+  const k=Math.min((W-pad*2)/(maxLo-minLo),(H-pad*2-14)/(maxLa-minLa));
+  const ox=(W-(maxLo-minLo)*k)/2, oy=(H-(maxLa-minLa)*k)/2+10;
+  const P=p=>[ox+(p.pos[1]-minLo)*k, oy+(maxLa-p.pos[0])*k];
+  const xy=pts.map(P);
+  let d=`M${xy[0][0].toFixed(1)},${xy[0][1].toFixed(1)}`;
+  for(let i=1;i<xy.length;i++){ const [x0,y0]=xy[i-1],[x1,y1]=xy[i]; const mx=(x0+x1)/2, my=(y0+y1)/2-8; d+=` Q${mx.toFixed(1)},${my.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`; }
+  const seen={}; let labels='', dots='', boxes=xy.map(([x,y])=>[x-10,y-10,x+10,y+10]);
+  const hit=(b,i)=>b[0]<4||b[2]>W-4||b[1]<4||b[3]>H-4||boxes.some((o,j)=>j!==i&&!(b[2]<o[0]||b[0]>o[2]||b[3]<o[1]||b[1]>o[3]));
+  pts.forEach((p,i)=>{ const [x,y]=xy[i]; const key=p.pos.join(); const dup=seen[key]; seen[key]=1;
+    dots+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="#FFFFFF" stroke="#E8890C" stroke-width="2.4"/>`;
+    if(dup) return;
+    const w=p.name.length*10.5+4, h=24; const cands=[[x-w/2,y-8-h,'middle',x],[x-w/2,y+8,'middle',x],[x-10-w,y-h/2,'end',x-10],[x+10,y-h/2,'start',x+10],[x+10,y-h-2,'start',x+10],[x+10,y+2,'start',x+10],[x-10-w,y-h-2,'end',x-10],[x-10-w,y+2,'end',x-10]];
+    let c=cands.find(c=>!hit([c[0],c[1],c[0]+w,c[1]+h],i))||cands[0]; boxes.push([c[0],c[1],c[0]+w,c[1]+h]);
+    labels+=`<text x="${c[3].toFixed(1)}" y="${(c[1]+11).toFixed(1)}" text-anchor="${c[2]}" font-size="10.5" font-weight="700" fill="#1D1D1F">${esc(p.name)}</text><text x="${c[3].toFixed(1)}" y="${(c[1]+22).toFixed(1)}" text-anchor="${c[2]}" font-size="9" font-weight="700" fill="#8A4F00">${esc(p.time.split(' ')[0])}</text>`; });
+  labels=dots+labels;
+  let grid=''; for(let gx=0;gx<=W;gx+=38) grid+=`<path d="M${gx} 0V${H}"/>`; for(let gy=0;gy<=H;gy+=38) grid+=`<path d="M0 ${gy}H${W}"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="rg" cx="50%" cy="40%" r="70%"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EEF0F4"/></radialGradient></defs><rect width="${W}" height="${H}" fill="url(#rg)"/><g stroke="rgba(60,60,67,.08)" stroke-width="1">${grid}</g><path d="${d}" fill="none" stroke="rgba(232,137,12,.22)" stroke-width="8" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#E8890C" stroke-width="2.4" stroke-dasharray="6 5" stroke-linecap="round"/>${labels}</svg>`;
+}
+function renderOverviewPane(){
+  const m=SCENE_META, t=SCENE.trips[0];
+  const totalKm=DAYS.reduce((s,d)=>s+(parseInt(d.km)||0),0);
+  $('pane-overview').innerHTML=`
+    <div class="card p16"><p class="lead">${esc(OVERVIEW_TEXT[m.id]||SCENE.intro||(m.days+' · '+m.title+'，'+m.cities.join(' → ')))}</p>
+      <div class="cityline">${m.cities.map((c,i)=>`${i?'<i>→</i>':''}<span>${esc(c)}</span>`).join('')}</div>
+      <div class="stats"><div class="stat"><b>${esc(m.days)}</b><span>天数</span></div><div class="stat"><b>${DAYS.length}</b><span>日程</span></div><div class="stat"><b>${ROUTE_POINTS.length}</b><span>途经点</span></div></div></div>
+    <div class="sec-h"><span>${ico('map')} 行程路线</span> <small onclick="openSub('map')" style="color:var(--accent-ink)">地图导航 ›</small></div>
+    <div class="routemap" onclick="openSub('map')">${routeSVG()}</div>
+    <div class="sec-h">每日安排 <small>${t&&t.start?t.start.slice(5).replace('-','/')+' - '+t.end.slice(5).replace('-','/'):''}</small></div>
+    ${DAYS.map((d,i)=>`<div class="card dcard" onclick="gotoDay(${i})"><span class="dtag">${d.d}</span><img class="dthumb" ${srcset(d.img)} alt="" loading="lazy" decoding="async"><div class="dmain"><b>${esc(d.route)}</b><span>${esc(d.high)}</span><span>${d.date?d.date.slice(5).replace('-','/')+' '+d.wd+' · ':''}车程 ${esc(d.drive)}</span></div><span class="chev">›</span></div>`).join('')}
+    ${(m.id==='qinggan-loop'||(SCENE.tips||[]).length)?'<div class="sec-h">实用贴士</div>':''}
+    ${(m.id==='qinggan-loop'?TIPS:(SCENE.tips||[])).map(x=>`<div class="card tip"><b>${noEmo(x[0])}</b><p>${x[1]}</p></div>`).join('')}
+    ${(SCENE.SOURCES||[]).length?`<div class="sec-h">信息来源 <small>${SCENE.SOURCES.length} 条</small></div><div class="card srcs">${SCENE.source?`<p class="srcnote">${esc(SCENE.source)}</p>`:''}${SCENE.SOURCES.map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)} ›</a>`).join('')}</div>`:''}`;
+  $('pane-overview').insertAdjacentHTML('beforeend','<div id="aiActions"></div>'); sceneAiActions();
+}
+let curDay=0;
+function renderTripPane(i){
+  curDay=i; const d=DAYS[i];
+  const stripTitle=s=>s.replace(/^[^\u4e00-\u9fa5A-Za-z0-9]+/,'').split(/[（(·]/)[0].trim();
+  $('pane-trip').innerHTML=`
+    <div class="daybar" id="daybar" data-hscroll>${DAYS.map((x,j)=>`<button class="dchip ${j===i?'on':''}" onclick="renderTripPane(${j});animatePane('pane-trip')"><b>${x.d}</b><span>${x.date.slice(5).replace('-','/')}</span></button>`).join('')}</div>
+    <div class="card dayhead"><img ${srcset(d.img)} alt="" decoding="async"><button class="favbtn ${isFav('day:'+SCENE_META.id+':'+i)?'on':''}" onclick="event.stopPropagation();favDay(${i},this)" aria-label="收藏这一天">${isFav('day:'+SCENE_META.id+':'+i)?'♥':'♡'}</button><div class="dh"><h3>${esc(d.d)} · ${esc(d.route)}</h3><div class="dsub">${[[d.date,d.wd].filter(Boolean).join(' '),d.drive?'车程 '+esc(d.drive):'',esc(d.cap||'')].filter(Boolean).join(' · ')}</div><div class="hl">${esc(d.high)}</div></div></div>
+    <div class="tl">${d.items.map(it=>`<div class="card tli"><div class="tt">${esc(it.t)}</div><h4>${esc(it.ti)}</h4><p>${esc(it.d)}</p>${it.tip?`<div class="tip2">${it.tip}</div>`:''}<a class="navbtn" href="${amapSearch(stripTitle(it.ti))}" target="_blank" rel="noopener">➤ 导航</a></div>`).join('')}</div>
+    ${d.stay?`<div class="card stay"><span class="si">${ico('bed')}</span><div class="sm"><b>${esc(d.stay.n)}</b><span>${esc(d.stay.r)}</span></div><span class="sp">${esc(d.stay.p)}</span></div>`:''}`;
+  const chip=document.querySelector('#daybar .dchip.on'); if(chip){ const bar=$('daybar'); bar.scrollLeft=chip.offsetLeft-bar.clientWidth/2+chip.clientWidth/2; }
+}
+function gotoDay(i){ renderTripPane(i); switchTab('trip'); }
+function renderFoodPane(){
+  const groups={}; const order=[];
+  SCENE.food.forEach(sec=>sec.items.forEach(it=>{ if(!groups[it.city]){groups[it.city]=[];order.push(it.city);} groups[it.city].push(it); }));
+  $('pane-food').innerHTML=`<div class="sec-h">${esc(SCENE.food[0].label)} <small>${order.length} 座城市</small></div>`+order.map(c=>`<div class="fgroup"><div class="fcity">${esc(c)}</div>${groups[c].map(it=>`<div class="card food"><button class="favbtn ${isFav('food:'+SCENE_META.id+':'+it.name)?'on':''}" onclick="favFood(this)" data-c="${esc(c)}" data-n="${esc(it.name)}" aria-label="收藏美食">${isFav('food:'+SCENE_META.id+':'+it.name)?'♥':'♡'}</button><h4>${esc(it.name)}</h4><p>${esc(it.desc)}</p><div class="addr"><span>${ico('pin')} ${esc(it.address)}</span><a class="navbtn" href="${amapSearch(c+' '+it.address.split(' / ')[0])}" target="_blank" rel="noopener">➤ 导航</a></div></div>`).join('')}</div>`).join('')+`<div class="foot">${SCENE_META.id==='qinggan-loop'?'攻略整理自小红书收藏':'信息整理自公开攻略，出行前以官方为准'} · 祝旅途愉快</div>`;
+}
+const TOOL_SVG={"budget": "<path d=\"M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1\"/><path d=\"M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4\"/>", "map": "<polygon points=\"3 11 22 2 13 21 11 13 3 11\"/>", "tickets": "<path d=\"M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z\"/><path d=\"M13 5v2M13 17v2M13 11v2\"/>", "weather": "<path d=\"M12 2v2M4.93 4.93l1.41 1.41M20 12h2M19.07 4.93l-1.41 1.41M15.95 12.65A4 4 0 0 0 8.4 9.5\"/><path d=\"M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z\"/>", "fx": "<path d=\"m21 16-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16\"/>"};
+function renderToolsPane(){
+  const rows=[['budget','💰','旅行账本','金额汇总 · 记一笔自动归类',''],['map','🧭','地图导航','路线总览 + 高德 / 百度一键导航',DAYS.length+'段'],['tickets','🎫','预订票据','机票 / 酒店 / 火车 / 门票',ORDERS.length+'单'],['weather','🌤️','天气参考','沿途城市气温 · 穿衣与海拔',''],['fx','💱','汇率换算','多币种折算人民币','']];
+  $('pane-tools').innerHTML=`<div class="sec-h">旅途工具</div><div class="card" style="overflow:hidden">${rows.map(r=>`<div class="trow" onclick="openSub('${r[0]}')"><span class="tico tool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${TOOL_SVG[r[0]]||''}</svg></span><div class="tmain"><b>${r[2]}</b><span>${r[3]}</span></div>${r[4]?`<span class="badge">${r[4]}</span>`:''}<span class="chev">›</span></div>`).join('')}</div><div class="foot">旅途中常用的小工具都在这里</div>`;
+}
+
+/* ---------- 清单（按场景持久化） ---------- */
+let CLS=[];
+function saveCl(){ store.set(clKey(SCENE_META.id),CLS); }
+function renderChecklist(){
+  const pr=clProgress(CLS);
+  $('pane-list').innerHTML=`<div class="card clp"><div class="h"><span>打包进度 · ${pr.d} / ${pr.t}</span><b id="clPct">${pr.p}%</b></div><div class="bar"><i id="clBar"></i></div></div>`+
+    CLS.map((g,gi)=>`<div class="clg"><h3>${esc(g.t)}</h3><div class="card" style="overflow:hidden">${g.items.map((it,ii)=>`<div class="cli ${it.done?'done':''}" onclick="clFlip(${gi},${ii},this)"><span class="cbx"><i>✓</i></span><span class="cn">${esc(it.n)}</span>${it.r?`<span class="cr">${esc(it.r)}</span>`:''}</div>`).join('')}
+      <div class="cl-add"><input id="clN${gi}" placeholder="给这个分类添加一项…" onkeydown="if(event.key==='Enter')clAdd(${gi})"><div class="add-btn" onclick="clAdd(${gi})">添加</div></div></div></div>`).join('')+
+    `<div class="foot">点击条目勾选 · 进度按场景保存在本机</div>`;
+  requestAnimationFrame(()=>{ const b=$('clBar'); if(b) b.style.transform=`scaleX(${pr.t?pr.d/pr.t:0})`; });
+}
+function clFlip(gi,ii,el){ const it=CLS[gi].items[ii]; it.done=!it.done; saveCl(); el.classList.toggle('done',it.done);
+  const pr=clProgress(CLS); $('clPct').textContent=pr.p+'%'; $('clBar').style.transform=`scaleX(${pr.t?pr.d/pr.t:0})`; const h=document.querySelector('.clp .h span'); if(h) h.textContent=`打包进度 · ${pr.d} / ${pr.t}`; }
+function clAdd(gi){ const el=$('clN'+gi); const v=el.value.trim(); if(!v){ toast('先填写清单内容'); return; } CLS[gi].items.push({n:v,r:'',done:false}); saveCl(); renderChecklist(); toast('已添加到「'+CLS[gi].t+'」'); }
+
+/* ---------- Tab 切换：胶囊弹簧滑动 + 内容交叉淡入 ---------- */
+const TABS=['overview','trip','food','list','tools'];
+function moveCap(idx,instant){
+  const cap=$('tabCap'), bar=$('tabbar'); const w=(bar.clientWidth-12)/TABS.length;
+  cap.style.width=w+'px'; const to=`translateX(${idx*w}px)`; const from=cap._x||to; cap._x=to;
+  cap.style.transform=to;
+  if(instant||REDUCED||from===to) return;
+  withWillChange(cap,320); cap.animate([{transform:from},{transform:to}],{duration:320,easing:SPRING_EASE});
+}
+function animatePane(id){ const p=$(id); p.classList.remove('enter'); void p.offsetWidth; p.classList.add('enter'); withWillChange(p,220); clearTimeout(p._t); p._t=setTimeout(()=>p.classList.remove('enter'),260); }
+function switchTab(name,instant){
+  window._backT=0; const idx=TABS.indexOf(name); const changed=name!==curTab; curTab=name; $('scene').dataset.tab=name;
+  document.querySelectorAll('.tab').forEach(t=>{ const on=t.dataset.tab===name; t.classList.toggle('on',on); t.setAttribute('aria-selected',on);
+    if(on&&changed&&!instant){ const ic=t.querySelector('.ico'); ic.classList.remove('pop'); void ic.offsetWidth; ic.classList.add('pop'); } });
+  document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+name));
+  moveCap(idx,instant);
+  if(!instant) animatePane('pane-'+name);
+  const sc=$('sceneScroll'), tb=$('tabbar'); if(changed){ const hero=$('sceneHero'); const stick=hero.offsetTop+hero.offsetHeight-4-(parseFloat(getComputedStyle(tb).top)||0); if(sc.scrollTop>stick) sc.scrollTop=Math.max(0,stick); }
+  $('tabbar').classList.remove('shrink');
+}
+addEventListener('resize',()=>moveCap(TABS.indexOf(curTab),true));
+
+/* ---------- 滚动：底栏收缩 / 顶栏标题（passive + rAF） ---------- */
+(function(){ const sc=$('sceneScroll'); let last=0,acc=0,tick=false;
+  sc.addEventListener('scroll',()=>{ if(tick) return; tick=true; requestAnimationFrame(()=>{ tick=false; const y=sc.scrollTop, dy=y-last; last=y;
+    acc=(Math.sign(dy)===Math.sign(acc))?acc+dy:dy; const bar=$('tabbar');
+    if(acc>40 && y>40 && !bar.classList.contains('shrink')){ withWillChange(bar,260); bar.classList.add('shrink'); }
+    else if((acc<-10||y<40) && bar.classList.contains('shrink')){ withWillChange(bar,260); bar.classList.remove('shrink'); }
+    { const ht=document.querySelector('#sceneHero .ht'); if(ht){ const tb=$('sceneTop').getBoundingClientRect().bottom; const t=ht.getBoundingClientRect().top; ht.style.opacity=y<=0?'':Math.max(0,Math.min(1,(t-tb)/36)).toFixed(3); } }
+    $('sceneTop').classList.toggle('solid', y>(curTab==='overview'?220:Math.max(4,Math.min(8,sc.scrollHeight-sc.clientHeight-1)))); }); },{passive:true});
+})();
+
+/* ---------- 1.2.8 手势：Tab 横滑跟手 + 左缘返回（UI-SPEC §8） ---------- */
+const G_EASE='cubic-bezier(.32,.72,0,1)';
+function gEase(k){ let lo=0,hi=1; for(let i=0;i<18;i++){ const m=(lo+hi)/2; const x=3*(1-m)*(1-m)*m*.32+m*m*m; if(x<k) lo=m; else hi=m; } const t=(lo+hi)/2; return 3*(1-t)*(1-t)*t*.72+3*(1-t)*t*t+t*t*t; }
+function gLayers(){ // 返回当前最上层 {T:被拖层, U:[下层], dimHost, z}
+  const gp=document.querySelector('.gpage.open');
+  if(gp) return {kind:'gpage',T:gp,U:sceneOpen?[$('scene')]:[$('home')],host:document.body,z:49};
+  const sub=document.querySelector('.sub.open');
+  if(sub) return {kind:'sub',T:sub,U:[$('sceneScroll'),$('sceneTop')],host:$('scene'),z:29};
+  if(sceneOpen) return {kind:'scene',T:$('scene'),U:[$('home')],host:document.body,z:9};
+  return null; }
+function gBackCommit(kind,T){
+  window._backT=0;
+  if(kind==='sub'){ T.classList.remove('open','push','pop'); afterSubClose(); }
+  else if(kind==='gpage'){ closeGPages(); updateGnav(); }
+  else { renderHome(); T.classList.remove('open'); T.setAttribute('aria-hidden','true'); sceneOpen=false; resetSceneAnims(); updateGnav(); }
+}
+function gEdgeFrame(L,dx){ const W=innerWidth, p=Math.max(0,Math.min(1,dx/W));
+  L.T.style.transform=`translate3d(${dx}px,0,0)`;
+  L.U.forEach(u=>u.style.transform=`translate3d(${(-30*(1-p)).toFixed(2)}%,0,0)`);
+  if(L.dim) L.dim.style.opacity=(.4*(1-p)).toFixed(3); }
+function gEdgeBegin(L){ L.T.style.willChange='transform'; L.T.style.boxShadow='-8px 0 24px rgba(0,0,0,.12)'; L.U.forEach(u=>u.style.willChange='transform');
+  const d=document.createElement('div'); d.className='edge-dim'; d.style.zIndex=L.z; L.host.appendChild(d); L.dim=d; return L; }
+function gEdgeCleanup(L){ [L.T,...L.U].forEach(x=>{ x.style.transform=''; x.style.willChange=''; }); L.T.style.boxShadow=''; if(L.dim) L.dim.remove(); }
+function gEdgeRelease(L,dx,complete){ const W=innerWidth;
+  if(REDUCED){ gEdgeCleanup(L); if(complete){ gBackCommit(L.kind,L.T); } return; }
+  const to=complete?W:0, dur=complete?300:260, t0=performance.now(), from=dx;
+  const step=now=>{ const k=Math.min(1,(now-t0)/dur); const e=1-Math.pow(1-k,3); gEdgeFrame(L,from+(to-from)*e);
+    if(k<1) requestAnimationFrame(step); else { if(complete) gBackCommit(L.kind,L.T); gEdgeCleanup(L); } };
+  requestAnimationFrame(step); }
+window.animatedBack=function(){ const L=gLayers(); if(!L) return false; gEdgeBegin(L); gEdgeFrame(L,0); gEdgeRelease(L,0,true); return true; };
+
+function gHScroll(el,dx){ // 起点所在横向滚动容器是否还能朝该方向滚
+  for(let x=el; x&&x!==document.body; x=x.parentElement){
+    if(x.scrollWidth>x.clientWidth+1){ const ox=getComputedStyle(x).overflowX; if(ox==='auto'||ox==='scroll'||x.hasAttribute('data-hscroll')){
+      const max=x.scrollWidth-x.clientWidth; if(dx<0 && x.scrollLeft<max-1) return true; if(dx>0 && x.scrollLeft>1) return true; return false; } } }
+  return false; }
+
+(function(){
+  let st=null, raf=0, pend=null;
+  const W=()=>innerWidth;
+  const onHome=()=>!gLayers();
+  document.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse'&&e.button!==0) return; if($('modalMask').classList.contains('show')) return;
+    if(st&&st.mode) return;
+    const edge=e.clientX<24 && !onHome();
+    const tabOK=sceneOpen && !document.querySelector('.sub.open,.gpage.open') && !!e.target.closest('#sceneScroll') && !e.target.closest('.leaflet-container');
+    const navOK=!sceneOpen||!!document.querySelector('.gpage.open'); const navOK2=navOK && !document.querySelector('.sub.open') && !e.target.closest('.gnav') && !!e.target.closest('#home,.gpage.open');
+    if(!edge && !tabOK && !navOK2){ st=null; return; }
+    st={id:e.pointerId,sx:e.clientX,sy:e.clientY,lx:e.clientX,lt:e.timeStamp,v:0,edge,tabOK,navOK:navOK2,target:e.target,mode:null,dx:0};
+  },{passive:true});
+  const frame=()=>{ raf=0; if(!st||!st.mode) return; if(st.mode==='edge') gEdgeFrame(st.L,Math.max(0,st.dx)); else if(st.mode==='nav') navFrame(st); else tabFrame(st); };
+  document.addEventListener('pointermove',e=>{
+    if(!st||e.pointerId!==st.id) return; const dx=e.clientX-st.sx, dy=e.clientY-st.sy;
+    const dt=e.timeStamp-st.lt; if(dt>0){ const vi=(e.clientX-st.lx)/dt; st.v=st.v*.4+vi*.6; } st.lx=e.clientX; st.lt=e.timeStamp;
+    if(!st.mode){
+      if(Math.hypot(dx,dy)<10) return;
+      if(!(Math.abs(dx)>Math.abs(dy)*1.2)){ st=null; return; }
+      if(st.edge && dx>0){ st.mode='edge'; st.L=gEdgeBegin(gLayers()); }
+      else if(st.tabOK && !gHScroll(st.target,dx)){ st.mode='tab'; tabBegin(st); }
+      else if(st.navOK && !gHScroll(st.target,dx)){ st.mode='nav'; navBegin(st); }
+      else { st=null; return; }
+      try{ e.target.setPointerCapture(e.pointerId); }catch(_){}
+    }
+    st.dx=dx; if(!raf) raf=requestAnimationFrame(frame);
+  },{passive:true});
+  const end=(e,cancel)=>{ if(!st||e.pointerId!==st.id) return; const s=st; st=null; if(raf){ cancelAnimationFrame(raf); raf=0; } if(!s.mode) return;
+    if(s.mode==='edge'){ const dx=Math.max(0,s.dx); gEdgeRelease(s.L,dx,!cancel&&(dx>W()*.35||s.v>0.5)); }
+    else if(s.mode==='nav') navRelease(s,cancel); else tabRelease(s,cancel); };
+  document.addEventListener('pointerup',e=>end(e,false),{passive:true});
+  document.addEventListener('pointercancel',e=>end(e,true),{passive:true});
+
+
+  /* 底栏 4 页横滑（与 §8.1 同参数） */
+  const GP=['home','trip','fav','me'];
+  const gEl=n=>n==='home'?$('home'):n==='trip'?$('scene'):n==='fav'?$('favView'):$('meView');
+  const gCur=()=>$('favView').classList.contains('open')?'fav':$('meView').classList.contains('open')?'me':sceneOpen?'trip':'home';
+  function navPrep(s,n){ const p={n,el:gEl(n)};
+    if(n==='home'){ if(sceneOpen){ p.hidScene=true; $('scene').style.visibility='hidden'; } }
+    else if(n==='trip'){ if(!sceneOpen){ const last=store.get('lastScene',null); let i=INDEX.findIndex(x=>x.id===last); if(i<0) i=0; p.opened=true; p.ready=openScene(i,null).then(()=>{ $('scene').getAnimations({subtree:false}).forEach(a=>a.cancel()); switchTab('trip',true); }); } }
+    else { (n==='fav'?renderFav:renderMe)(); p.el.classList.add('open'); p.opened=true; p.el.scrollTop=0; }
+    p.el.style.willChange='transform'; return p; }
+  function navBegin(s){ s.cur=gCur(); s.idx=GP.indexOf(s.cur); s.el=gEl(s.cur); s.el.style.willChange='transform'; s.nb={};
+    [-1,1].forEach(d=>{ const n=GP[s.idx+d]; if(n) s.nb[d]=navPrep(s,n); });
+    s.capW=($('gnav').clientWidth-12)/4; $('gCap').style.transition='none'; s.lastHalf=s.idx; }
+  function navDx(s){ let dx=s.dx; if((s.idx===0&&dx>0)||(s.idx===GP.length-1&&dx<0)) dx*=.35; return Math.max(-innerWidth,Math.min(innerWidth,dx)); }
+  function gcapAt(s,pos){ $('gCap').style.transform=`translateX(${(pos*s.capW).toFixed(2)}px)`;
+    const k=Math.max(0,Math.min(3,Math.round(pos))); if(k!==s.lastHalf){ s.lastHalf=k; document.querySelectorAll('.gtab').forEach(t=>t.classList.toggle('on',t.dataset.g===GP[k])); } }
+  function navPlace(s,x){ const W=innerWidth; s.el.style.transform=`translate3d(${x}px,0,0)`; Object.entries(s.nb).forEach(([d,p])=>{ p.el.style.transform=`translate3d(${d*W+x}px,0,0)`; }); gcapAt(s,s.idx-x/W); }
+  function navFrame(s){ navPlace(s,navDx(s)); }
+  function navCleanup(s,dir){ [s.el,...Object.values(s.nb).map(p=>p.el)].forEach(x=>{ x.style.transform=''; x.style.willChange=''; }); $('scene').style.visibility='';
+    const target=dir?GP[s.idx+dir]:s.cur;
+    Object.values(s.nb).forEach(p=>{ if(p.n===target) return; if(p.opened){ if(p.n==='trip'){ (p.ready||Promise.resolve()).then(()=>{ if(gCur()!=='trip'||target!=='trip') forceCloseScene(); updateGnav(); }); } else p.el.classList.remove('open'); } });
+    if(dir){ window._backT=0;
+      if(target==='home'){ closeGPages(); if(sceneOpen) forceCloseScene(); }
+      else if(target==='trip'){ closeGPages(); }
+      else { document.querySelectorAll('.gpage.open').forEach(g=>{ if(g!==gEl(target)) g.classList.remove('open'); }); }
+    }
+    $('gCap').style.transition=''; updateGnav(); }
+  function navRelease(s,cancel){ const W=innerWidth, dx=navDx(s); let dir=0;
+    if(!cancel){ if(Math.abs(dx)>W*.3) dir=dx<0?1:-1; else if(Math.abs(s.v)>0.4) dir=s.v<0?1:-1; if(dir&&!GP[s.idx+dir]) dir=0; }
+    const toX=-dir*W;
+    if(REDUCED){ navCleanup(s,dir); if(dir) gEl(GP[s.idx+dir]).animate([{opacity:0},{opacity:1}],{duration:150}); return; }
+    const dur=Math.max(180,Math.round(320*Math.abs(toX-dx)/W)), t0=performance.now();
+    const step=now=>{ const k=Math.min(1,(now-t0)/dur); navPlace(s,dx+(toX-dx)*gEase(k)); if(k<1) requestAnimationFrame(step); else navCleanup(s,dir); };
+    requestAnimationFrame(step); }
+  /* Tab 横滑 */
+  function tabBegin(s){ const idx=TABS.indexOf(curTab), body=$('sceneBody'), sc=$('sceneScroll'), tb=$('tabbar');
+    const bw=body.clientWidth; const tbB=tb.getBoundingClientRect().bottom-sc.getBoundingClientRect().top;
+    const top=Math.max(0,sc.scrollTop-body.offsetTop+tbB); s.idx=idx; s.bw=bw; s.nb={};
+    [-1,1].forEach(d=>{ const n=TABS[idx+d]; if(!n) return; const p=$('pane-'+n); s.nb[d]=p;
+      p.style.cssText=`display:block;position:absolute;left:16px;right:16px;top:${top+ (parseFloat(getComputedStyle(body).paddingTop)||0)}px;transform:translate3d(${d*bw}px,0,0)`; });
+    body.style.position='relative'; body.style.willChange='transform'; $('tabCap').style.willChange='transform';
+    s.capW=(tb.clientWidth-12)/TABS.length; s.lastHalf=idx; }
+  function tabDx(s){ let dx=s.dx; const idx=s.idx; if((idx===0&&dx>0)||(idx===TABS.length-1&&dx<0)) dx*=.35; return Math.max(-s.bw,Math.min(s.bw,dx)); }
+  function capAt(s,pos){ $('tabCap').style.transform=`translateX(${(pos*s.capW).toFixed(2)}px)`;
+    const k=Math.max(0,Math.min(TABS.length-1,Math.round(pos))); if(k!==s.lastHalf){ s.lastHalf=k; document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.tab===TABS[k])); } }
+  function tabFrame(s){ const dx=tabDx(s); $('sceneBody').style.transform=`translate3d(${dx}px,0,0)`; capAt(s,s.idx-dx/s.bw); }
+  function tabRelease(s,cancel){ const dx=tabDx(s), bw=s.bw; let dir=0;
+    if(!cancel){ if(Math.abs(dx)>innerWidth*.3) dir=dx<0?1:-1; else if(Math.abs(s.v)>0.4) dir=s.v<0?1:-1; if(dir&&!TABS[s.idx+dir]) dir=0; }
+    const toX=-dir*bw, body=$('sceneBody'), cap=$('tabCap');
+    const done=()=>{ body.style.transform=''; body.style.willChange=''; cap.style.willChange=''; Object.values(s.nb).forEach(p=>p.style.cssText='');
+      switchTab(TABS[s.idx+dir],true); };
+    if(REDUCED){ if(dir){ done(); body.animate([{opacity:0},{opacity:1}],{duration:150}); } else done(); return; }
+    const dur=Math.max(180,Math.round(320*Math.abs(toX-dx)/bw)); const t0=performance.now();
+    const ez=k=>{ // cubic-bezier(.32,.72,0,1) 近似：数值求解
+      let lo=0,hi=1; for(let i=0;i<18;i++){ const m=(lo+hi)/2; const x=3*(1-m)*(1-m)*m*.32+3*(1-m)*m*m*0+m*m*m; if(x<k) lo=m; else hi=m; } const t=(lo+hi)/2; return 3*(1-t)*(1-t)*t*.72+3*(1-t)*t*t*1+t*t*t; };
+    const p0=s.idx-dx/bw, p1=s.idx+dir;
+    const step=now=>{ const k=Math.min(1,(now-t0)/dur), e=ez(k); const x=dx+(toX-dx)*e; body.style.transform=`translate3d(${x}px,0,0)`; capAt(s,p0+(p1-p0)*e);
+      if(k<1) requestAnimationFrame(step); else done(); };
+    requestAnimationFrame(step); }
+})();
+/* 安卓物理返回键 */
+try{ const App=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App; if(App) App.addListener('backButton',()=>{ if($('modalMask').classList.contains('show')) closeModal(); else if(document.querySelector('.gpage.open,.sub.open')||sceneOpen){ if(!(window.animatedBack&&animatedBack())){ if(document.querySelector('.gpage.open')){ closeGPages(); updateGnav(); } else if(document.querySelector('.sub.open')) closeSub(); else closeScene(); } } else { if(Date.now()-(window._backT||0)<2000) App.exitApp(); else { window._backT=Date.now(); toast('再按一次退出'); } } }); }catch(e){}
+
+/* N-01: 任何页面开关都重置退出计时 */
+(function(){ try{ const mo=new MutationObserver(()=>{ window._backT=0; });
+  document.querySelectorAll('.view,.gpage,.sub,#scene,#modalMask').forEach(el=>mo.observe(el,{attributes:true,attributeFilter:['class']})); }catch(e){} })();
+/* ---------- 工具二级页 ---------- */
+function openSub(name){
+  if(!SCENE) return;
+  const s=$('sub-'+name); s.classList.add('open'); s.classList.remove('pop'); void s.offsetWidth; s.classList.add('push'); withWillChange(s,360);
+  $('sceneTop').style.visibility='hidden'; $('tabbar').style.visibility='hidden';
+  s.querySelector('.sub-scroll').scrollTop=0;
+  if(name==='map') setTimeout(renderOverview,380);
+  if(name==='weather') refreshWx(false);
+}
+function afterSubClose(){ $('sceneTop').style.visibility=''; $('tabbar').style.visibility=''; }
+function closeSub(){ const s=document.querySelector('.sub.open'); if(!s) return; s.classList.remove('push'); s.classList.add('pop'); afterSubClose(); setTimeout(()=>{ s.classList.remove('open','pop'); },300); }
+
+/* ==================== 以下沿用 v2 逻辑（账本 / 预订 / 地图 / 天气 / 汇率） ==================== */
+let DAYS=[], ROUTE_POINTS=[], DAY_ROUTE_INDEX={};
+const QG_ORDERS = [
+  { type:'flight', status:'出票完成', title:'深圳 → 西宁', badge:'去程', sub:'2026-09-27 06:50 - 11:50',
+    desc:'长龙航空 GJ8683', price:'¥2790', cap:'在线选座', btns:['开具发票','我要退款','我要改签','值机选座'] },
+  { type:'hotel', status:'预订成功', title:'青海湖观湖国际大酒店', sub:'2026-09-27 至 2026-09-28',
+    desc:'1晚 1间 山景大床房（浴揽山景+舒缓疲劳安眠）', price:'¥640.77', cap:'离店扣款', btns:['取消订单','原房续住','开发票'] },
+  { type:'hotel', status:'预订成功', title:'海西大柴旦像雅酒店', sub:'2026-09-28 至 2026-09-29',
+    desc:'1晚 1间 腻脂山|尊享豪华大床房【安睡加湿器】', price:'¥245', cap:'离店扣款', btns:['取消订单','原房续住','开发票'] },
+  { type:'hotel', status:'预订成功', title:'桔子酒店（敦煌夜市店）', sub:'2026-09-29 至 2026-09-30',
+    desc:'1晚 1间 高级大床房【小冰箱+加湿器+65寸投屏】', price:'¥830', cap:'离店扣款', btns:['取消订单','原房续住','开发票'] },
+  { type:'hotel', status:'预订成功', title:'戴斯精选温德姆酒店（敦煌夜市店）', sub:'2026-09-30 至 2026-10-01',
+    desc:'1晚 1间 戴斯·行政大床房', price:'¥748.65', cap:'离店扣款', btns:['取消订单','原房续住','开发票'] },
+  { type:'hotel', status:'预订成功', title:'如家商旅酒店（张掖高铁西站大佛寺店）', sub:'2026-10-01 至 2026-10-02',
+    desc:'1晚 1间 商务大床房（零压床|枕+智能马桶+加湿器）', price:'¥543', cap:'离店扣款', btns:['取消订单','原房续住','开发票'] },
+  { type:'hotel', status:'预订成功', title:'如家商旅酒店（西宁高铁火车站店）', sub:'2026-10-02 至 2026-10-03',
+    desc:'1晚 1间 高级大床房【中央空调+梦百合床品+智能客控】', price:'¥418', cap:'离店扣款', btns:['取消订单','原房续住','开发票'] },
+  { type:'train', status:'出票完成', title:'西宁 → 阜阳西', sub:'2026-10-03 09:30 - 18:04',
+    desc:'车次 G3178　08车05F号', price:'¥727', cap:'', btns:['退改签','接送火车','免费换座'] }
+];
+let orderFilter='全部';
+function segClick(el){ el.parentElement.querySelectorAll('.seg-tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); orderFilter=el.textContent.trim(); renderOrders(); }
+let routeMapInstance=null;
+let routeMapLayers=[];
+function totalKm(){ return DAYS.reduce((t,d)=>t+(parseInt(String(d.km||'').replace(/[^0-9]/g,''))||0),0); }
+function renderOverview(){
+  const legs=$('overviewLegs'); if(legs) legs.innerHTML=`<div class="overview-leg active" data-day="all" onclick="updateOverviewMap('all')"><b>总路线</b><strong>全程</strong><span>${esc(SCENE_META&&SCENE_META.days||DAYS.length+'天')}${totalKm()?' · 约'+totalKm()+'km':''}</span></div>`+DAYS.map((d,i)=>`<div class="overview-leg" data-day="${i+1}" onclick="updateOverviewMap(${i+1})"><b>${d.d}</b><strong>${d.route.split(' → ')[0]}</strong><span>${d.km}</span></div>`).join('');
+  if(!window.L || !$('routeMap')) return;
+  if(routeMapInstance){ routeMapInstance.invalidateSize(); updateOverviewMap('all'); return; }
+  routeMapInstance=L.map('routeMap',{zoomControl:false,attributionControl:true,scrollWheelZoom:false,dragging:true}).setView([38.2,98.2],5);
+  L.control.zoom({position:'bottomright'}).addTo(routeMapInstance);
+  L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}',{subdomains:['1','2','3','4'],maxZoom:18,attribution:'© 高德地图'}).addTo(routeMapInstance);
+  updateOverviewMap('all');
+}
+function updateOverviewMap(day){
+  if(!routeMapInstance) return;
+  routeMapLayers.forEach(l=>routeMapInstance.removeLayer(l)); routeMapLayers=[];
+  const ids=DAY_ROUTE_INDEX[day]||DAY_ROUTE_INDEX.all, pts=ids.map(i=>ROUTE_POINTS[i]).filter(Boolean), line=pts.map(p=>p.pos);
+  routeMapLayers.push(L.polyline(line,{color:'#16b9ad',weight:5,opacity:.9,dashArray:day==='all'?'8 8':null}).addTo(routeMapInstance));
+  pts.forEach((p,i)=>{ const marker=L.circleMarker(p.pos,{radius:7,color:'#fff',weight:3,fillColor:'#e5484d',fillOpacity:.98}).addTo(routeMapInstance).bindPopup(`<b>${p.name}</b><br>${p.time} · ${p.dist}`).bindTooltip(p.name,{permanent:true,direction:'top',offset:[0,-8],className:'route-label'}); routeMapLayers.push(marker); });
+  if(line.length>1) routeMapInstance.fitBounds(L.latLngBounds(line),{padding:[18,18],maxZoom:day==='all'?6:8,animate:true,duration:.55});
+  document.querySelectorAll('.overview-leg').forEach(el=>el.classList.toggle('active',String(el.dataset.day)===String(day)));
+}
+/* ==================== 票据 ==================== */
+function renderOrders(){
+  const icoCls={flight:'t-flight',hotel:'t-hotel',train:'t-train',ticket:'t-ticket'};
+  const sym={flight:ico('plane'),hotel:ico('bed'),train:ico('train'),ticket:ico('ticket')};
+  const list=ORDERS.filter(o=>orderFilter==='全部'||(orderFilter==='机票火车'&&(o.type==='flight'||o.type==='train'))||(orderFilter==='酒店'&&o.type==='hotel')||(orderFilter==='门票'&&o.type==='ticket')||(orderFilter==='待点评'&&o.status==='待点评'));
+  if(!list.length){ $('orderList').innerHTML=`<div class="card empty-orders"><div style="font-size:28px;color:var(--accent-ink)">${ico('ticket')}</div><b>${ORDERS.length?'这个分类下没有票据':'还没有票据'}</b><p>点上方「上传票据截图」，自动识别机票、酒店、火车票和门票</p></div>`; return; }
+  $('orderList').innerHTML = list.map(o=>{
+    const isRoute = o.type==='flight'||o.type==='train';
+    const head = isRoute
+      ? `<div class="route">${o.title.replace(' → ',' <span class="arrow">→</span> ')}${o.badge?' <span class="flight-badge">'+o.badge+'</span>':''}</div>`
+      : `<div class="oc-title">${o.title}</div>`;
+    return `<div class="order-card">
+      <div class="oc-head"><div class="oc-type"><span class="type-ico ${icoCls[o.type]}">${sym[o.type]}</span>${
+        o.type==='flight'?'机票':o.type==='hotel'?'酒店':o.type==='train'?'火车票':'门票'}</div>
+        <div class="oc-status">${o.status}</div></div>
+      <div class="oc-main"><div>${head}
+        <div class="oc-sub">${o.sub}</div><div class="oc-desc">${o.desc}</div></div>
+        <div class="oc-price"><div class="amt">${o.price}</div>${o.cap?'<div class="cap">'+o.cap+'</div>':''}</div></div>
+      <div class="oc-btns">${o.btns.map(b=>`<button class="obtn" onclick="toast('${b}：演示环境暂未接入')">${b}</button>`).join('')}</div></div>`;
+  }).join('');
+}
+async function recognizeTicket(file){
+  if(!file) return; const status=$('ticketStatus'); if(status) status.textContent='识别中…';
+  try{
+    if(!window.Tesseract){ await new Promise((resolve,reject)=>{ const s=document.createElement('script'); s.src='./vendor/tesseract/tesseract.min.js'; s.onload=resolve; s.onerror=reject; document.head.appendChild(s); }); }
+    const result=await Tesseract.recognize(file,'chi_sim+eng',{workerPath:new URL('./vendor/tesseract/worker.min.js',location.href).href,logger:m=>{ if(status&&m.progress) status.textContent='识别 '+Math.round(m.progress*100)+'%'; }});
+    const text=(result.data.text||'').replace(/\s+/g,' ').trim();
+    const type=/酒店|入住|房型/.test(text)?'hotel':/火车|车次|铁路|G\d+/.test(text)?'train':/门票|景区|预约/.test(text)?'ticket':'flight';
+    const title=(text.match(/.{0,18}(酒店|机场|车次|景区|航空).{0,18}/)||['识别票据'])[0].trim();
+    ORDERS.unshift({type,status:'待确认',title:title||'识别票据',sub:'已从截图识别 · 请确认信息',desc:text.slice(0,120)||file.name,price:'待确认',cap:'截图票据',btns:['编辑信息','删除']});
+    renderOrders(); if(status) status.textContent='已识别并加入'; toast('票据识别完成，请核对信息');
+  }catch(e){ if(status) status.textContent='识别失败'; toast('识别失败，可保留截图后手动录入'); }
+}
+
+/* ==================== 地图导航 ==================== */
+function renderNav(){
+  $('navList').innerHTML = DAYS.map(d=>{
+    const stops=d.route.split(' → ');
+    const from=encodeURIComponent(stops[0]), to=encodeURIComponent(stops[stops.length-1]);
+    const amap = `https://uri.amap.com/navigation?from=${from}&to=${to}&mode=car&policy=1&src=trip&coordinate=gaode&callnative=1`;
+    const baidu = `https://api.map.baidu.com/direction?origin=${from}&destination=${to}&mode=driving&output=html`;
+    return `<div class="grow" style="cursor:default"><div class="grow-main"><div class="grow-title"><span class="day-tag">${d.d}</span>${d.route}</div><div class="grow-sub">${d.km}</div></div>
+      <div class="grow-right"><a class="nbtn pri" href="${amap}" target="_blank" rel="noopener">高德导航</a><a class="nbtn" href="${baidu}" target="_blank" rel="noopener">百度地图</a></div></div>`;
+  }).join('');
+}
+/* ==================== 账本：重命名 / 明细 / 记一笔 ==================== */
+const QG_CATS_DEFAULT = [
+  { name:'✈ 大交通', amt:3517.00, items:[
+    {n:'去程机票 深圳→西宁 GJ8683', p:2790}, {n:'返程高铁 西宁→阜阳西 G3178', p:727} ] },
+  { name:'🏨 住宿（6晚）', amt:3425.42, items:[
+    {n:'青海湖观湖国际大酒店', p:640.77}, {n:'大柴旦像雅酒店', p:245}, {n:'敦煌桔子酒店（夜市店）', p:830},
+    {n:'敦煌戴斯温德姆酒店', p:748.65}, {n:'张掖如家商旅酒店', p:543}, {n:'西宁如家商旅酒店', p:418} ] },
+  { name:'🚙 包车 / 租车（预估）', amt:3200, items:[] },
+  { name:'🎫 门票（预估 / 2人）', amt:1400, items:[] },
+  { name:'🍜 餐饮 + 杂项（预估）', amt:1800, items:[] }
+];
+let CATS = store.get('cats', null) || JSON.parse(JSON.stringify(QG_CATS_DEFAULT));
+let ORDERS = QG_ORDERS;
+let CUR_SCENE='qinggan-loop';
+const catKey=id=>id==='qinggan-loop'?'cats':'cats_'+id;
+if(!store.get('zeroEstimateApplied',false)){
+  CATS.forEach(c=>{ if(/预估/.test(c.name)){ c.amt=0; c.items=[]; } });
+  store.set('cats',CATS); store.set('zeroEstimateApplied',true);
+}
+function saveBudget(){
+  CATS.forEach(c=>{c.name=noEmo(c.name);(c.items||[]).forEach(i=>{if(i&&i.n)i.n=noEmo(i.n);if(i&&i.name)i.name=noEmo(i.name);});});store.set(catKey(CUR_SCENE),CATS);
+}
+function renderBudget(){
+  const total = CATS.reduce((s,c)=>s+c.amt,0);
+  const max = Math.max(1, ...CATS.map(c=>c.amt));
+  $('budgetBox').innerHTML = `
+    <div class="budget-summary">
+      <div class="bs-lab">金额汇总</div>
+      <div class="bs-num"><small>¥</small> ${total.toFixed(2)}</div>
+    </div>
+    <div class="record-btn" onclick="openRecord()">＋ 记一笔（自动归类）</div>
+    <div class="group-label">分类明细</div>
+    <div class="glist cat-list" style="margin-top:0">${CATS.map((c,i)=>`
+      <div class="grow cat-card ${c.amt?'':'empty'}" onclick="openCat(${i})"><div class="grow-main">
+        <div class="grow-title cat-name">${esc(noEmo(c.name))}</div>
+        <div class="grow-sub">${c.items.length ? '已记 '+c.items.length+' 笔 · '+esc(c.items.slice(-2).map(x=>x.n).join(' / ')) : '点击添加明细记录'}</div>
+        <div class="cat-bar"><i style="transform:scaleX(${(c.amt/max).toFixed(3)})"></i></div></div>
+        <div class="grow-right"><b class="cat-amt">¥${c.amt.toFixed(2)}</b><span class="chev">›</span></div></div>`).join('')}
+    </div>
+    <div class="footer-note">点分类查看明细 · 「记一笔」自动归类</div>`;
+}
+function renameCat(i,el){ const v=el.textContent.trim(); if(v){ CATS[i].name=v; saveBudget(); } else { el.textContent=CATS[i].name; } }
+function openCat(i){
+  const c=CATS[i];
+  $('modalCard').innerHTML = `
+    <div class="modal-head"><div class="cat-title-wrap" id="catTitleWrap"><h3>${esc(noEmo(c.name))} · 明细</h3><button class="cat-edit-btn" aria-label="修改分类标题" onclick="editCatTitle(${i})">✎</button></div><div class="modal-x" onclick="closeModal()">✕</div></div>
+    ${c.items.length ? c.items.map((it,j)=>`
+      <div class="mi-row" id="miRow${i}_${j}"><span class="mi-n">${esc(it.n)}</span><span class="mi-p">¥${(+it.p).toFixed(2)}</span><span class="mi-edit" aria-label="编辑明细" onclick="editItem(${i},${j})">✎</span>
+        <span class="mi-del" onclick="delItem(${i},${j})">✕</span></div>`).join('')
+      : '<div class="hint">暂无明细，在下方记第一笔吧</div>'}
+    <div class="add-row"><input id="miN" placeholder="内容，如：${esc(exPlace())}门票×2" onfocus="revealModalInput(this)">
+      <input id="miP" style="flex:0 0 86px" type="number" inputmode="decimal" placeholder="金额¥" onfocus="revealModalInput(this)">
+      <div class="add-btn" onclick="addItem(${i})">添加</div></div>
+    <div class="hint">金额会自动计入「${esc(noEmo(c.name))}」小计与账本总额</div>`;
+  $('modalMask').classList.add('show'); document.body.classList.add('modal-open');
+  $('modalCard').querySelectorAll('input').forEach(input=>input.addEventListener('focus',()=>revealModalInput(input),{passive:true}));
+}
+function adjustModalForKeyboard(){ const vv=window.visualViewport, mask=$('modalMask'), card=$('modalCard'); if(!vv||!mask||!card) return; const keyboard=Math.max(0,window.innerHeight-vv.height-vv.offsetTop); mask.style.paddingBottom=keyboard>80?keyboard+'px':''; if(keyboard>80) card.style.maxHeight=Math.max(220,vv.height-24)+'px'; else card.style.maxHeight=''; }
+function revealModalInput(input){ if(!input) return; input.scrollIntoView({block:'center',behavior:'smooth'}); setTimeout(()=>{ adjustModalForKeyboard(); const card=$('modalCard'); if(card) card.scrollTop=Math.max(0,input.offsetTop-card.clientHeight*.32); input.scrollIntoView({block:'center',behavior:'smooth'}); },120); }
+if(window.visualViewport){ visualViewport.addEventListener('resize',adjustModalForKeyboard); visualViewport.addEventListener('scroll',adjustModalForKeyboard); }
+function editCatTitle(i){
+  const wrap=$('catTitleWrap'); if(!wrap) return;
+  wrap.innerHTML=`<div class="cat-title-editor"><input id="catRename" type="text" inputmode="text" autocomplete="off" autocapitalize="none" value="${esc(CATS[i].name)}" aria-label="分类标题" onfocus="revealModalInput(this)"><button class="add-btn" onclick="renameCatFromModal(${i})">保存</button></div>`;
+  const input=$('catRename');
+  if(input){
+    const focusAndReveal=()=>{ input.focus({preventScroll:false}); input.select(); input.scrollIntoView({block:'center',behavior:'smooth'}); };
+    focusAndReveal();
+    requestAnimationFrame(focusAndReveal);
+    setTimeout(focusAndReveal,180);
+  }
+}
+function renameCatFromModal(i){ const el=$('catRename'); const v=el&&el.value.trim(); if(!v){toast('标题不能为空');return;} CATS[i].name=v; saveBudget(); renderBudget(); openCat(i); toast('分类标题已更新'); }
+function editItem(i,j){
+  const row=$(`miRow${i}_${j}`), it=CATS[i].items[j]; if(!row) return;
+  row.classList.add('editing');
+  row.innerHTML=`<div class="mi-edit-fields"><input class="mi-edit-name" id="miEditN${i}_${j}" value="${esc(it.n)}" aria-label="明细名称" onfocus="revealModalInput(this)"><input class="mi-edit-price" id="miEditP${i}_${j}" type="number" inputmode="decimal" step="0.01" value="${Number(it.p).toFixed(2)}" aria-label="明细金额" onfocus="revealModalInput(this)"><button class="add-btn" onclick="saveItem(${i},${j})">保存</button></div>`;
+  const nameInput=$(`miEditN${i}_${j}`), priceInput=$(`miEditP${i}_${j}`);
+  if(nameInput){ nameInput.focus(); nameInput.setSelectionRange(nameInput.value.length,nameInput.value.length); revealModalInput(nameInput); }
+  if(priceInput) priceInput.addEventListener('keydown',e=>{ if(e.key==='Enter') saveItem(i,j); });
+}
+function saveItem(i,j){
+  const nameInput=$(`miEditN${i}_${j}`), priceInput=$(`miEditP${i}_${j}`);
+  const v=nameInput&&nameInput.value.trim(), p=parseFloat(priceInput&&priceInput.value);
+  if(!v){toast('明细不能为空');return;} if(!Number.isFinite(p)||p<0){toast('请输入有效金额');return;}
+  const old=Number(CATS[i].items[j].p)||0; CATS[i].items[j].n=v; CATS[i].items[j].p=Math.round(p*100)/100;
+  CATS[i].amt=Math.round((Number(CATS[i].amt||0)-old+p)*100)/100;
+  saveBudget(); renderBudget(); openCat(i); toast('明细和金额已更新');
+}
+function closeModal(){ const m=$('modalMask'), c=$('modalCard'); m.classList.remove('show'); document.body.classList.remove('modal-open'); m.style.paddingBottom=''; if(c) c.style.maxHeight=''; }
+function addItem(i){
+  const n=$('miN').value.trim(), p=parseFloat($('miP').value);
+  if(!n || !Number.isFinite(p)){ toast('请填写内容和金额'); return; } if(p<0){ toast('金额不能为负数'); return; }
+  CATS[i].items.push({n,p});
+  CATS[i].amt = Math.round((CATS[i].amt+p)*100)/100;
+  saveBudget(); renderBudget(); openCat(i); toast('已记入「'+CATS[i].name+'」');
+}
+function delItem(i,j){
+  const it=CATS[i].items[j];
+  CATS[i].amt = Math.round((CATS[i].amt-it.p)*100)/100;
+  CATS[i].items.splice(j,1);
+  saveBudget(); renderBudget(); openCat(i);
+}
+function classify(n){
+  if(/机票|航班|高铁|火车|动车|大交通/.test(n)) return 0;
+  if(/酒店|民宿|住宿|客栈|青旅/.test(n)) return 1;
+  if(/租车|包车|油费|加油|过路|停车/.test(n)) return 2;
+  if(/门票|景区|索道|观光车|区间车|莫高窟|盐湖|丹霞|嘉峪关|鸣沙山|翡翠湖|二郎剑/.test(n)) return 3;
+  return 4;
+}
+function openRecord(){
+  $('modalCard').innerHTML = `
+    <div class="modal-head"><h3>＋ 记一笔</h3><div class="modal-x" onclick="closeModal()">✕</div></div>
+    <div class="add-row" style="margin-top:2px"><input id="rcN" placeholder="内容，如：${esc(exPlace())}门票 2 张" oninput="rcGuess()"></div>
+    <div class="add-row"><input id="rcP" type="number" inputmode="decimal" placeholder="金额 ¥">
+      <select id="rcC">${CATS.map((c,i)=>`<option value="${i}">${esc(noEmo(c.name))}</option>`).join('')}</select></div>
+    <div class="add-row"><div class="add-btn" style="flex:1" onclick="saveRecord()">保存并自动归类</div></div>
+    <div class="hint">输入内容后按关键词自动识别分类（机票/酒店/租车/门票/餐饮），可手动改选</div>`;
+  $('modalMask').classList.add('show'); document.body.classList.add('modal-open');
+  setTimeout(()=>{ const el=$('rcN'); if(el) el.focus(); }, 100);
+}
+function rcGuess(){ const sel=$('rcC'); if(sel) sel.value = classify($('rcN').value); }
+function saveRecord(){
+  const n=$('rcN').value.trim(), p=parseFloat($('rcP').value), i=+$('rcC').value;
+  if(!n || !Number.isFinite(p)){ toast('请填写内容和金额'); return; } if(p<0){ toast('金额不能为负数'); return; }
+  CATS[i].items.push({n,p});
+  CATS[i].amt = Math.round((CATS[i].amt+p)*100)/100;
+  saveBudget(); renderBudget(); closeModal(); toast('已归类到「'+CATS[i].name+'」');
+}
+/* ==================== 天气：实时刷新 / 搜索添加 ==================== */
+const QG_CITIES_DEFAULT = [
+  { name:'西宁 · 青海湖一带', lat:36.62, lon:101.78, alt:'海拔 2260-3200m', wear:'羽绒服', icon:'🌤️', temp:'6~18℃',
+    cells:[['日出','06:52'],['日落','19:08'],['穿衣','羽绒服']] },
+  { name:'敦煌 · 鸣沙山', lat:40.14, lon:94.66, alt:'海拔 1140m', wear:'短袖+外套', icon:'🏜️', temp:'10~27℃',
+    cells:[['日出','07:14'],['日落','19:42'],['穿衣','短袖+外套']] },
+  { name:'张掖 · 七彩丹霞', lat:38.93, lon:100.45, alt:'海拔 1480m', wear:'薄外套', icon:'⛰️', temp:'8~22℃',
+    cells:[['日出','06:58'],['日落','19:16'],['穿衣','薄外套']] },
+  { name:'祁连 · 扁都口', lat:38.18, lon:100.99, alt:'海拔 3500m', wear:'厚外套', icon:'🏔️', temp:'-2~12℃',
+    cells:[['风','4-5级'],['路面','留意结冰'],['穿衣','厚外套']] }
+];
+const cityKey=id=>id==='qinggan-loop'?'cities':'cities_'+id;
+function sceneCities(){ const seen={}; const src=ROUTE_POINTS.length?ROUTE_POINTS:[];
+  return src.filter(p=>p&&p.pos&&!seen[p.name]&&(seen[p.name]=1)).map(p=>({name:p.name, lat:Math.round(p.pos[0]*100)/100, lon:Math.round(p.pos[1]*100)/100, alt:(p.time?p.time+' 途经':'沿途城市'), wear:'按海拔增减', icon:'', temp:'--℃', cells:[['日程',p.time||'—'],['天气','待刷新'],['穿衣','按海拔增减']]})); }
+function loadCities(id){ const st=store.get(cityKey(id),null); if(st&&st.length) return st; return id==='qinggan-loop'?JSON.parse(JSON.stringify(QG_CITIES_DEFAULT)):sceneCities(); }
+let CITIES = loadCities('qinggan-loop');
+let LIVE = store.get('wxlive', {}) || {};
+let wxBusy=false;
+function wmo(c){
+  if(c===0) return [ico('sun'),'晴'];
+  if(c<=2) return [ico('cloud'),'多云'];
+  if(c===3) return [ico('cloud'),'阴'];
+  if(c===45||c===48) return [ico('fog'),'雾'];
+  if((c>=51&&c<=67)||(c>=80&&c<=82)) return [ico('rain'),c>=80?'阵雨':c<=57?'毛毛雨':'雨'];
+  if((c>=71&&c<=77)||c===85||c===86) return [ico('snow'),'雪'];
+  if(c>=95) return [ico('storm'),'雷阵雨'];
+  return [ico('cloud'),'—'];
+}
+function renderWeather(){
+  $('weatherBox').innerHTML = CITIES.map(c=>{
+    const lv = LIVE[c.lat+','+c.lon];
+    const wi = lv ? wmo(lv.code)[0] : ico(/海拔 ?3|山|口/.test(c.name+c.alt)?'mount':'sun');
+    const cond = lv ? wmo(lv.code)[1] : '';
+    const cells = lv ? [['天气',cond],['风速',Math.round(lv.wind)+'km/h'],['穿衣',c.wear||'—']] : c.cells;
+    return `<div class="wx-card">
+      ${CITIES.length>1?`<button class="wx-remove" aria-label="删除城市" onclick="removeCity('${c.lat},${c.lon}',event)">✕</button>`:''}
+      <div class="wx-top"><div class="wx-ico">${wi}</div><div>
+        <div class="wx-city">${esc(c.name)}</div>
+        <div class="wx-desc">${esc(c.alt)}</div></div>
+        <div class="wx-temp">${lv ? Math.round(lv.t)+'℃' : (c.temp||'--℃')}</div></div>
+      <div class="wx-grid">${cells.map(cl=>`<div class="wx-cell"><div class="k">${cl[0]}</div><div class="v">${cl[1]}</div></div>`).join('')}</div>
+      <div class="wx-live">${lv ? '实时 · 更新于 '+lv.time : '点击上方「刷新实时天气」获取实时数据'}</div>
+    </div>`;
+  }).join('');
+}
+async function refreshWx(manual){
+  if(wxBusy || !CITIES.length) return;
+  wxBusy=true;
+  const spin=$('wxSpin'), txt=$('wxRefTxt');
+  if(spin) spin.style.animation='wxspin 1s linear infinite';
+  if(txt) txt.textContent='刷新中…';
+  try{
+    const lats=CITIES.map(c=>c.lat).join(','), lons=CITIES.map(c=>c.lon).join(',');
+    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+lats+'&longitude='+lons+'&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&timezone=auto');
+    if(!r.ok) throw new Error('http');
+    let data=await r.json();
+    if(!Array.isArray(data)) data=[data];
+    const now=new Date();
+    const ts=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    data.forEach((d,i)=>{ if(!CITIES[i]||!d.current) return;
+      LIVE[CITIES[i].lat+','+CITIES[i].lon]={ t:d.current.temperature_2m, code:d.current.weather_code, wind:d.current.wind_speed_10m, hum:d.current.relative_humidity_2m, time:ts }; });
+    WEATHER_REFRESH_TIME=now.getFullYear()+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+String(now.getDate()).padStart(2,'0')+' '+ts;
+    store.set('weatherRefreshTime',WEATHER_REFRESH_TIME);
+    store.set('wxlive',LIVE);
+    renderWeather();
+    // v3: 今日页已移除
+    if(manual) toast('实时天气已更新 '+ts);
+  }catch(e){ if(manual) toast('天气获取失败，请检查网络'); }
+  if(spin) spin.style.animation='';
+  if(txt) txt.textContent='刷新实时天气';
+  wxBusy=false;
+}
+async function addCity(){
+  const q=$('wxQ').value.trim();
+  if(!q){ toast('输入城市名，如：'+exPlace()); return; }
+  try{
+    const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(q)+'&count=1&language=zh&format=json');
+    const d=await r.json();
+    if(!d.results || !d.results.length){ toast('未找到「'+q+'」'); return; }
+    const g=d.results[0];
+    CITIES.push({ name:g.name+(g.admin1?' · '+g.admin1:''), lat:Math.round(g.latitude*100)/100, lon:Math.round(g.longitude*100)/100,
+      alt:'海拔 '+(g.elevation!=null?Math.round(g.elevation)+'m':'--'), wear:'出发前确认', icon:'📍', temp:'--℃',
+      cells:[['天气','待刷新'],['穿衣','—'],['备注','已加入天气列表']] });
+    store.set(cityKey(CUR_SCENE),CITIES);
+    $('wxQ').value=''; renderWeather(); refreshWx(false);
+    toast('已添加：'+g.name);
+  }catch(e){ toast('搜索失败，请检查网络'); }
+}
+function removeCity(key,e){ if(e) e.stopPropagation(); if(CITIES.length<=1){toast('至少保留一个城市');return;} const idx=CITIES.findIndex(c=>c.lat+','+c.lon===key); if(idx<0)return; CITIES.splice(idx,1); delete LIVE[key]; store.set(cityKey(CUR_SCENE),CITIES); store.set('wxlive',LIVE); renderWeather(); refreshWx(false); toast('城市已删除'); }
+
+/* ==================== 汇率 ==================== */
+function fxCalc(){
+  const v=parseFloat($('fxIn').value)||0;
+  const from=parseFloat($('fxFrom').value), to=parseFloat($('fxTo').value);
+  const out=(v*from)/to;
+  $('fxOut').value=out.toFixed(2);
+  $('fxRes').textContent = `${v} ${$('fxFrom').selectedOptions[0].textContent.split(' ')[0]} = ${out.toFixed(2)} ${$('fxTo').selectedOptions[0].textContent.split(' ')[0]}`;
+}
+['fxIn','fxFrom','fxTo'].forEach(id=>$(id).addEventListener('input',fxCalc));
+let WEATHER_REFRESH_TIME=store.get('weatherRefreshTime','');
+function renderToday(){}
+setInterval(()=>{ if($('sub-weather').classList.contains('open')) refreshWx(false); }, 600000);
+
+
+/* ==================== 1.2.2：全局底栏 / 收藏 / 我的 ==================== */
+let FAVS=store.get('favs',[]);
+const isFav=k=>FAVS.some(f=>f.k===k);
+function toggleFav(o){ const i=FAVS.findIndex(f=>f.k===o.k); if(i>=0){ FAVS.splice(i,1); toast('已取消收藏'); } else { FAVS.unshift(o); toast('已加入收藏'); } store.set('favs',FAVS); return i<0; }
+function setHeart(el,on){ if(!el) return; el.classList.toggle('on',on); el.textContent=on?'♥':'♡'; }
+function updateFavBtn(){ setHeart($('favSceneBtn'), !!SCENE_META && isFav('scene:'+SCENE_META.id)); }
+function favScene(){ const m=SCENE_META; if(!m) return; setHeart($('favSceneBtn'), toggleFav({k:'scene:'+m.id,type:'scene',sid:m.id,title:m.title,sub:(m.days||'')+' · '+(m.cities||[]).join(' → '),img:m.cover})); }
+function favDay(i,el){ const m=SCENE_META, d=DAYS[i]; setHeart(el, toggleFav({k:'day:'+m.id+':'+i,type:'day',sid:m.id,i,title:d.d+' · '+d.route,sub:m.title+(d.date?' · '+d.date:''),img:d.img})); }
+function favFood(el){ const m=SCENE_META, n=el.dataset.n, c=el.dataset.c; setHeart(el, toggleFav({k:'food:'+m.id+':'+n,type:'food',sid:m.id,title:n,sub:m.title+' · '+c})); }
+function forceCloseScene(){ document.querySelectorAll('.sub.open').forEach(x=>x.classList.remove('open','push','pop')); afterSubClose(); const sc=$('scene'); sc.classList.remove('open'); sc.setAttribute('aria-hidden','true'); resetSceneAnims(); sceneOpen=false; renderHome(); }
+function closeGPages(){ document.querySelectorAll('.gpage.open').forEach(p=>p.classList.remove('open')); }
+async function goScene(id,tab,day){ const i=INDEX.findIndex(s=>s.id===id); if(i<0) return; closeGPages();
+  if(sceneOpen&&curIdx!==i) forceCloseScene();
+  if(!sceneOpen) await openScene(i,null);
+  if(document.querySelector('.sub.open')){ document.querySelectorAll('.sub.open').forEach(x=>x.classList.remove('open','push','pop')); afterSubClose(); }
+  if(day!=null){ renderTripPane(day); switchTab('trip',true); } else if(tab) switchTab(tab,true);
+  updateGnav(); }
+function placeGCap(g){ const c=$('gCap'), n=$('gnav'); if(!c||!n) return; const w=(n.clientWidth-12)/4; c.style.width=w+'px'; c.style.transform=`translateX(${(['home','trip','fav','me'].indexOf(g)*w).toFixed(2)}px)`; }
+addEventListener('resize',()=>updateGnav());
+function updateGnav(){ const g=$('favView').classList.contains('open')?'fav':$('meView').classList.contains('open')?'me':sceneOpen?'trip':'home';
+  document.querySelectorAll('.gtab').forEach(t=>{ const on=t.dataset.g===g; t.classList.toggle('on',on); t.setAttribute('aria-selected',on); });  placeGCap(g); }
+function gnavGo(t){
+  window._backT=0;
+  if(t==='home'){ closeGPages(); if(sceneOpen) forceCloseScene(); $('home').scrollTop=0; }
+  else if(t==='trip'){ closeGPages(); if(sceneOpen){ if(document.querySelector('.sub.open')) closeSub(); switchTab('trip'); } else { const last=store.get('lastScene',null); const s=INDEX.find(x=>x.id===last)||INDEX[0]; if(s){ goScene(s.id,'trip'); return; } } }
+  else if(t==='fav'){ closeGPages(); renderFav(); $('favView').classList.add('open'); $('favView').scrollTop=0; }
+  else if(t==='me'){ closeGPages(); renderMe(); $('meView').classList.add('open'); $('meView').scrollTop=0; }
+  updateGnav();
+}
+function renderFav(){
+  const sec=(type,label,ico)=>{ const L=FAVS.filter(f=>f.type===type); if(!L.length) return ''; return `<div class="sec-h">${label} <small>${L.length}</small></div>`+L.map(f=>{
+      const go=type==='scene'?`goScene('${f.sid}','overview')`:type==='day'?`goScene('${f.sid}',null,${f.i})`:`goScene('${f.sid}','food')`;
+      return `<div class="card frow" onclick="${go}">${type==='food'?`<span class="ficon">${ico}</span>`:`<img ${srcset(f.img)} alt="" decoding="async">`}<div class="fm"><b>${esc(f.title)}</b><span>${esc(f.sub)}</span></div><button class="icon-btn on" onclick="event.stopPropagation();toggleFav({k:'${f.k}'});renderFav()" aria-label="取消收藏">♥</button></div>`; }).join(''); };
+  $('favBox').innerHTML = FAVS.length ? sec('scene','场景')+sec('day','每日行程')+sec('food','美食',ico('bowl'))
+    : `<div class="card empty" style="padding:28px 20px;text-align:center"><div class="ei" style="font-size:34px">♡</div><h3 style="margin:8px 0">还没有收藏</h3><p>进入场景后点右上角 ♡ 收藏整条线路，<br>在「行程」「美食」里点 ♡ 收藏某一天或某道美食。</p><div class="add-btn" style="margin:16px auto 0;display:inline-flex" onclick="gnavGo('home')">去逛逛</div></div>`;
+}
+let CREDITS_TXT=null;
+async function renderMe(){
+  const cl=INDEX.reduce((n,s)=>n+(store.get(clKey(s.id),null)?1:0),0);
+  $('meBox').innerHTML=(await aiKeyCardHTML())+`<div class="sec-h">设置</div><div class="card" style="overflow:hidden">
+    <div class="mrow" onclick="if(confirm('清空全部收藏？')){FAVS=[];store.set('favs',FAVS);toast('收藏已清空');renderMe();}">清空收藏 <span>${FAVS.length} 项 ›</span></div>
+    <div class="mrow" onclick="if(confirm('重置所有场景的打包清单勾选？')){INDEX.forEach(s=>localStorage.removeItem('qg_'+clKey(s.id)));toast('清单已重置');renderHome();renderMe();}">重置打包清单 <span>${cl} 个场景有进度 ›</span></div>
+    <div class="mrow" onclick="localStorage.removeItem('qg_wxlive');toast('天气缓存已清除')">清除天气缓存 <span>›</span></div></div>
+    <div class="sec-h">关于</div><div class="card" style="overflow:hidden">
+    <div class="mrow">随时Go <span>版本 1.2.9 (12)</span></div>
+    <div class="mrow">旅行手册（地图、天气需联网） <span>${INDEX.length} 个场景</span></div>
+    <div class="mrow">天气数据 <span>Open-Meteo</span></div>
+    <div class="mrow">地图 <span>高德地图 · Leaflet</span></div></div>
+    <div class="sec-h">图片来源</div><div class="card credits" id="creditsBox">加载中…</div>
+    <div class="foot">川西、云南、新疆线路照片来自 Wikimedia Commons，按各自许可（CC0 / CC BY / CC BY-SA）使用</div>`;
+  try{ if(CREDITS_TXT==null){ const r=await fetch('images/CREDITS.txt'); CREDITS_TXT=r.ok?await r.text():''; } }catch(e){ CREDITS_TXT=''; }
+  const b=$('creditsBox'); if(b) b.innerHTML=(CREDITS_TXT||'暂无').split('\n').filter(Boolean).map(l=>`<div>${esc(l)}</div>`).join('');
+}
+/* ==================== 1.2.9：AI 添加 / 重新生成场景（DeepSeek + Wikimedia Commons） ==================== */
+const AI={};
+AI.cap=()=>window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()?Capacitor:null;
+AI.plug=n=>{ const c=AI.cap(); return c&&c.Plugins&&c.Plugins[n]||null; };
+/* 键值：Capacitor Preferences（本机），浏览器退回 localStorage */
+AI.kvGet=async k=>{ const P=AI.plug('Preferences'); if(P){ const r=await P.get({key:k}); return r&&r.value!=null?r.value:null; } return localStorage.getItem('pref:'+k); };
+AI.kvSet=async(k,v)=>{ const P=AI.plug('Preferences'); if(P){ if(v==null) await P.remove({key:k}); else await P.set({key:k,value:String(v)}); return; } if(v==null) localStorage.removeItem('pref:'+k); else localStorage.setItem('pref:'+k,String(v)); };
+/* 文件：Capacitor Filesystem（Data 目录），浏览器退回 localStorage */
+AI.fsWrite=async(path,text)=>{ const F=AI.plug('Filesystem'); if(F){ await F.writeFile({path:'ai/'+path,data:text,directory:'DATA',encoding:'utf8',recursive:true}); return; } localStorage.setItem('aifs:'+path,text); };
+AI.fsRead=async path=>{ const F=AI.plug('Filesystem'); if(F){ try{ const r=await F.readFile({path:'ai/'+path,directory:'DATA',encoding:'utf8'}); return r.data; }catch(e){ return null; } } return localStorage.getItem('aifs:'+path); };
+AI.fsDel=async path=>{ const F=AI.plug('Filesystem'); if(F){ try{ await F.deleteFile({path:'ai/'+path,directory:'DATA'}); }catch(e){} return; } localStorage.removeItem('aifs:'+path); };
+AI.readJSON=async p=>{ const t=await AI.fsRead(p); if(!t) return null; try{ return JSON.parse(t); }catch(e){ return null; } };
+/* HTTP：原生走 CapacitorHttp（绕过 WebView CORS），浏览器用 fetch */
+AI.http=async(o)=>{ const H=AI.plug('CapacitorHttp');
+  if(H){ const r=await H.request({url:o.url,method:o.method||'GET',headers:o.headers||{},data:o.data,responseType:o.responseType||'json',connectTimeout:o.timeout||60000,readTimeout:o.timeout||60000});
+    return {status:r.status,data:r.data}; }
+  const ac=new AbortController(); const tm=setTimeout(()=>ac.abort(),o.timeout||60000);
+  try{ const r=await fetch(o.url,{method:o.method||'GET',headers:o.headers||{},body:o.data!=null?JSON.stringify(o.data):undefined,signal:ac.signal});
+    const txt=await r.text(); let data=txt; try{ data=JSON.parse(txt); }catch(e){} return {status:r.status,data}; }
+  finally{ clearTimeout(tm); } };
+AI.KEY='deepseek_key';
+AI.getKey=()=>AI.kvGet(AI.KEY);
+
+/* 浅色渐变占位封面（按场景名取色） */
+function gradCover(name){ let h=0; for(const ch of String(name||'')) h=(h*31+ch.codePointAt(0))%360;
+  const a=`hsl(${h},55%,72%)`, b=`hsl(${(h+50)%360},50%,52%)`;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="824" height="618" viewBox="0 0 824 618"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="824" height="618" fill="url(#g)"/><circle cx="640" cy="150" r="120" fill="#fff" opacity=".18"/><circle cx="700" cy="240" r="70" fill="#fff" opacity=".12"/></svg>`;
+  return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg); }
+
+/* 结构样例（取自内置 chuanxi-loop.json，日期/价格/电话留空） */
+const AI_SAMPLE={id:"example",title:"川西小环线",intro:"一句话概述这条线路。",days:[{d:"D1",date:"",wd:"",route:"成都 → 都江堰 → 四姑娘山镇",drive:"约220km / 约4h",high:"当天亮点一句话",km:"220km",img:"",cap:"四姑娘山 · 一句图注",stay:{n:"日隆镇民宿",r:"",p:""},items:[{t:"08:00",ti:"成都出发",d:"路线与安排说明。",tip:"实用提醒（纯文本）"}]}],
+  routePoints:[{name:"成都",pos:[104.07,30.67],time:"D1",dist:"起点"},{name:"四姑娘山",pos:[102.85,31.1],time:"D1",dist:"约220km"}],
+  food:[{label:"不能错过的美食",items:[{city:"成都",name:"火锅 · 串串",desc:"一句介绍。",address:"玉林路周边"}]}],
+  checklist:[{t:"证件与预订",items:[{n:"身份证（所有人）",r:"住宿/景区实名",done:false}]},{t:"衣物",items:[{n:"冲锋衣",r:"早晚温差大",done:false}]}],
+  tips:[["高反","一句贴士"]]};
+function aiPrompt(dest,days){
+  return [{role:'system',content:`你是中国旅行攻略编辑。只输出一个 JSON 对象，结构必须与下面样例完全一致（字段名一致）：\n${JSON.stringify(AI_SAMPLE)}\n规则：days 数组必须正好 ${days} 项，d 依次为 D1…D${days}；每天 items 2-5 条；routePoints 至少 2 个，pos 为 [经度, 纬度] 数字；food 至少 1 组；checklist 至少 3 组；date、wd、stay.r、stay.p、价格、电话一律留空字符串，不要编造；img 留空；所有字段为纯文本，不要 HTML、不要 emoji。`},
+    {role:'user',content:`目的地：${dest}；天数：${days} 天。请生成攻略 JSON。`}]; }
+
+/* 结构校验 */
+function validateScene(o,days){ const err=[]; const S=v=>typeof v==='string'&&v.trim().length>0; const A=v=>Array.isArray(v)&&v.length>0;
+  if(!o||typeof o!=='object') return ['不是 JSON 对象'];
+  if(!S(o.title)) err.push('title');
+  if(!A(o.days)) err.push('days'); else { if(days&&o.days.length!==days) err.push('days 数量 '+o.days.length+'≠'+days);
+    o.days.forEach((d,i)=>{ if(!d||!S(d.route)) err.push(`days[${i}].route`); if(!A(d&&d.items)) err.push(`days[${i}].items`); else d.items.forEach((it,j)=>{ if(!it||!S(it.ti)) err.push(`days[${i}].items[${j}].ti`); }); }); }
+  if(!Array.isArray(o.routePoints)||o.routePoints.length<2) err.push('routePoints'); else o.routePoints.forEach((p,i)=>{ if(!p||!S(p.name)||!Array.isArray(p.pos)||p.pos.length!==2||!p.pos.every(n=>typeof n==='number'&&isFinite(n))) err.push(`routePoints[${i}]`); else { const [a,b]=p.pos; const lng=Math.max(a,b), lat=Math.min(a,b); if(lng<70||lng>140||lat<15||lat>55) err.push(`routePoints[${i}].pos 超出范围`); } });
+  if(!A(o.food)) err.push('food'); else o.food.forEach((g,i)=>{ if(!g||!A(g.items)) err.push(`food[${i}].items`); else g.items.forEach((f,j)=>{ if(!f||!S(f.name)) err.push(`food[${i}].items[${j}].name`); }); });
+  if(!A(o.checklist)) err.push('checklist'); else o.checklist.forEach((g,i)=>{ if(!g||!S(g.t)||!A(g.items)) err.push(`checklist[${i}]`); else g.items.forEach((c,j)=>{ if(!c||!S(c.n)) err.push(`checklist[${i}].items[${j}].n`); }); });
+  return err; }
+/* 清洗：去 HTML/emoji，日期价格电话清空 */
+function aiClean(v){ if(typeof v==='string') return v.replace(/<[^>]*>/g,'').replace(/[<>]/g,'').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu,'').trim();
+  if(Array.isArray(v)) return v.map(aiClean); if(v&&typeof v==='object'){ const o={}; for(const k in v) o[k]=aiClean(v[k]); return o; } return v; }
+function aiNormalize(o,id,dest){ o=aiClean(o); const tel=/(\+?\d[\d\- ]{6,}\d)/g;
+  o.id=id; o.source='AI 生成（DeepSeek），出行前请以官方信息为准'; o.trips=[]; o.dayRouteIndex={};
+  o.days.forEach((d,i)=>{ d.d='D'+(i+1); d.date=''; d.wd=''; d.img=''; d.focus='50% 50%'; d.stay=Object.assign({n:'',r:'',p:''},d.stay||{}); d.stay.r=''; d.stay.p='';
+    d.km=d.km||''; d.drive=d.drive||''; d.high=d.high||''; d.cap=d.cap||d.route.split('→').pop().trim();
+    d.items=d.items.map(it=>({t:it.t||'',ti:it.ti,d:(it.d||'').replace(tel,''),tip:it.tip?'<b>贴士：</b>'+esc(it.tip):''})); });
+  o.food.forEach(g=>{ g.label=g.label||'美食'; g.items.forEach(f=>{ f.city=f.city||dest; f.desc=(f.desc||'').replace(tel,''); f.address=f.address||''; }); });
+  o.checklist.forEach(g=>g.items.forEach(c=>{ c.r=c.r||''; c.done=false; }));
+  o.tips=(Array.isArray(o.tips)?o.tips:[]).filter(t=>Array.isArray(t)&&t.length>=2).map(t=>[String(t[0]),esc(String(t[1]))]);
+  o.SOURCES=[]; return o; }
+
+async function aiCallDeepSeek(key,dest,days){
+  const r=await AI.http({url:'https://api.deepseek.com/chat/completions',method:'POST',timeout:60000,
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+    data:{model:'deepseek-chat',messages:aiPrompt(dest,days),response_format:{type:'json_object'},temperature:0.7,max_tokens:8000}});
+  if(r.status===401) throw Object.assign(new Error('Key 无效或已过期（401）'),{fatal:true});
+  if(r.status<200||r.status>=300) throw new Error('接口返回 '+r.status);
+  const msg=r.data&&r.data.choices&&r.data.choices[0]&&r.data.choices[0].message; const txt=msg&&msg.content;
+  if(!txt) throw new Error('接口没有返回内容');
+  let o; try{ o=JSON.parse(String(txt).replace(/^```(?:json)?\s*|\s*```$/g,'')); }catch(e){ const er=new Error('返回内容不是合法 JSON'); er.invalid=true; throw er; }
+  return o; }
+
+/* Commons 搜图：横图、宽 ≥1440，返回 thumburl（1648 宽） */
+async function commonsSearch(q,used){
+  const u='https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=20&gsrsearch='+encodeURIComponent(q+' filetype:bitmap')+'&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=1648';
+  try{ const r=await AI.http({url:u,timeout:20000}); const pages=r.data&&r.data.query&&r.data.query.pages; if(!pages) return null;
+    const list=Object.values(pages).sort((a,b)=>(a.index||0)-(b.index||0));
+    for(const p of list){ const ii=p.imageinfo&&p.imageinfo[0]; if(!ii) continue; if(!/jpeg|png|webp/.test(ii.mime||'')) continue;
+      if(ii.width>=1440&&ii.width>ii.height*1.2&&ii.thumburl&&!used.has(ii.thumburl)){ used.add(ii.thumburl); return {url:ii.thumburl,title:p.title,page:ii.descriptionurl||''}; } }
+  }catch(e){} return null; }
+/* 图片缓存到本机：原生写 Filesystem 并转成 WebView 可读地址；浏览器直接用远程地址（HTTP 缓存） */
+async function cacheImage(url,name){ const F=AI.plug('Filesystem'), H=AI.plug('CapacitorHttp'), c=AI.cap();
+  if(!F||!H||!c) return url;
+  try{ const r=await H.request({url,method:'GET',responseType:'blob',connectTimeout:30000,readTimeout:30000}); if(r.status!==200||!r.data) return url;
+    const path='ai/img/'+name+'.jpg'; await F.writeFile({path,data:r.data,directory:'DATA',recursive:true});
+    const u=await F.getUri({path,directory:'DATA'}); return c.convertFileSrc(u.uri); }catch(e){ return url; } }
+async function aiImages(o,dest,id,onStep){ const used=new Set(); const credits=[];
+  onStep&&onStep('搜索封面图…'); const cv=await commonsSearch(dest,used);
+  o._cover=cv?await cacheImage(cv.url,id+'-cover'):''; if(cv) credits.push('封面：'+cv.title.replace(/^File:/,'')+' — Wikimedia Commons '+cv.page);
+  for(let i=0;i<o.days.length;i++){ const d=o.days[i]; onStep&&onStep(`搜索 ${d.d} 配图…`);
+    const q=(d.cap||'').split('·')[0].trim()||d.route.split('→').pop().trim(); const im=await commonsSearch(q,used)||await commonsSearch(dest+' '+q,used);
+    if(im){ d.img=await cacheImage(im.url,id+'-'+d.d); credits.push(d.d+'：'+im.title.replace(/^File:/,'')+' — Wikimedia Commons '+im.page); } else d.img=gradCover(dest+d.d); }
+  o.imgCredits=credits; return o; }
+
+/* AI 场景登记 */
+let AI_INDEX=[];
+async function aiLoadIndex(){ AI_INDEX=(await AI.readJSON('index.json'))||[]; return AI_INDEX; }
+async function aiSaveIndex(){ await AI.fsWrite('index.json',JSON.stringify(AI_INDEX)); }
+function aiMeta(o,dest,days,id,cover){ const cities=[...new Set(o.routePoints.map(p=>p.name))].slice(0,6);
+  return {id,title:o.title||dest,days:`${days}天${Math.max(0,days-1)}晚`,cities,cover:cover||gradCover(o.title||dest),status:'ready',file:'ai:'+id,source:'ai',dest,nDays:days,updated:Date.now()}; }
+async function mergeAIIndex(){ await aiLoadIndex(); const ov=(await AI.readJSON('overrides.json'))||{};
+  AI_INDEX.forEach(m=>{ if(!INDEX.some(x=>x.id===m.id)) INDEX.push(m); });
+  INDEX.forEach(m=>{ if(ov[m.id]){ m._override=true; if(ov[m.id].cover) m.cover=ov[m.id].cover; } }); }
+async function loadSceneData(meta){
+  if(meta._override||meta.source==='ai'){ const o=await AI.readJSON('scenes/'+meta.id+'.json'); if(o) return o; if(meta.source==='ai') throw new Error('本地场景文件缺失'); }
+  return loadJSON('data/scenes/'+meta.file); }
+
+/* 生成主流程：校验不过自动重试 1 次；全部通过才写入；旧版保留为 .prev */
+let AI_BUSY=false;
+async function aiGenerate(dest,days,existingId,onStep){
+  const key=await AI.getKey(); if(!key) throw Object.assign(new Error('还没有填写 DeepSeek Key'),{nokey:true});
+  let o=null, lastErr=null;
+  for(let attempt=1;attempt<=2;attempt++){
+    onStep&&onStep(attempt===1?'正在生成攻略（约 20-60 秒）…':'结构校验未通过，自动重试…');
+    try{ const raw=await aiCallDeepSeek(key,dest,days); const errs=validateScene(raw,days);
+      if(!errs.length){ o=raw; break; } lastErr=new Error('结构校验未通过：'+errs.slice(0,3).join('；')); }
+    catch(e){ if(e.name==='AbortError') throw new Error('请求超时（60 秒），请检查网络后重试'); if(!e.invalid){ if(/Failed to fetch|NetworkError|network|Load failed/i.test(e.message||'')) throw new Error('网络连接失败，请检查网络后重试'); throw e; } lastErr=e; }
+  }
+  if(!o) throw lastErr||new Error('生成失败');
+  const id=existingId||('ai-'+Date.now().toString(36));
+  o=aiNormalize(o,id,dest); await aiImages(o,dest,id,onStep);
+  onStep&&onStep('保存到本机…');
+  const prev=await AI.fsRead('scenes/'+id+'.json'); const builtin=INDEX.find(x=>x.id===id&&x.source!=='ai');
+  if(prev) await AI.fsWrite('scenes/'+id+'.prev.json',prev);
+  else if(builtin&&SCENE_CACHE[id]) await AI.fsWrite('scenes/'+id+'.prev.json',JSON.stringify(SCENE_CACHE[id]));
+  await AI.fsWrite('scenes/'+id+'.json',JSON.stringify(o));
+  if(builtin){ const ov=(await AI.readJSON('overrides.json'))||{}; ov[id]={cover:o._cover||null,at:Date.now()}; await AI.fsWrite('overrides.json',JSON.stringify(ov)); builtin._override=true; if(o._cover) builtin.cover=o._cover; }
+  else { const m=aiMeta(o,dest,days,id,o._cover); const i=AI_INDEX.findIndex(x=>x.id===id); if(i>=0){ m.prevMeta=AI_INDEX[i]; AI_INDEX[i]=m; } else AI_INDEX.push(m); await aiSaveIndex();
+    const j=INDEX.findIndex(x=>x.id===id); if(j>=0) INDEX[j]=m; else INDEX.push(m); }
+  SCENE_CACHE[id]=o; return id; }
+
+/* ---------- UI ---------- */
+function aiModal(html){ $('modalCard').innerHTML=html; $('modalMask').classList.add('show'); document.body.classList.add('modal-open'); }
+async function openAddScene(prefill){ const key=await AI.getKey();
+  aiModal(`<div class="modal-head"><h3>添加场景</h3><div class="modal-x" onclick="closeModal()">✕</div></div>
+    <div class="ai-form" id="aiForm">
+      <label class="ai-lab">目的地</label><input id="aiDest" placeholder="如：桂林阳朔、甘南、喀什" value="${esc(prefill&&prefill.dest||'')}" autocomplete="off">
+      <label class="ai-lab">天数</label><div class="ai-days">${[3,4,5,6,7,8].map(n=>`<button class="ai-day ${n===(prefill&&prefill.days||5)?'on':''}" data-n="${n}" onclick="aiPickDays(this)">${n} 天</button>`).join('')}</div>
+      ${key?'':'<div class="ai-warn">还没有填写 DeepSeek Key，<a onclick="closeModal();gnavGo(\'me\')">去「我的」设置</a></div>'}
+      <div class="record-btn" id="aiGo" onclick="aiStart()">生成攻略</div>
+      <div class="hint">由 DeepSeek 生成，日期、价格、电话不会自动填写；配图来自 Wikimedia Commons，搜不到时用渐变占位图。生成后保存在本机，没网也能看。</div>
+    </div>`); }
+function aiPickDays(b){ document.querySelectorAll('.ai-day').forEach(x=>x.classList.toggle('on',x===b)); }
+function aiGenView(dest,step){ return `<div class="modal-head"><h3>正在生成「${esc(dest)}」</h3></div>
+  <div class="ai-gen"><div class="ai-spin" aria-hidden="true"></div><div class="ai-step" id="aiStep">${esc(step||'准备中…')}</div><div class="hint">请保持 App 打开，超时 60 秒算失败，已有内容不受影响。</div></div>`; }
+function aiFailView(dest,msg,retryJs,nokey){ return `<div class="modal-head"><h3>生成失败</h3><div class="modal-x" onclick="closeModal()">✕</div></div>
+  <div class="ai-fail"><div class="ai-fail-ic">!</div><p class="ai-fail-msg">${esc(msg)}</p><p class="hint">「${esc(dest)}」${nokey?'需要先填写 Key。':'没有入库，已有内容保持不变。'}</p>
+  ${nokey?`<div class="record-btn" onclick="closeModal();gnavGo('me')">去填写 Key</div>`:`<div class="record-btn" id="aiRetry" onclick="${retryJs}">重试</div>`}</div>`; }
+async function aiRun(dest,days,existingId){ if(AI_BUSY) return; AI_BUSY=true; window._backT=0;
+  const job=JSON.stringify([dest,days,existingId||null]).replace(/"/g,'&quot;');
+  aiModal(aiGenView(dest));
+  try{ const id=await aiGenerate(dest,days,existingId,s=>{ const el=$('aiStep'); if(el) el.textContent=s; });
+    AI_BUSY=false; closeModal(); renderHome();
+    const i=INDEX.findIndex(x=>x.id===id); toast(existingId?'已更新为新版，旧版已保留':'已生成并保存到本机');
+    if(existingId&&sceneOpen){ forceCloseScene(); }
+    if(i>=0) await openScene(i,null);
+  }catch(e){ AI_BUSY=false; aiModal(aiFailView(dest,e.message||'生成失败',`aiRun.apply(null,${job})`,e.nokey)); } }
+function aiStart(){ const dest=($('aiDest').value||'').trim(); if(!dest){ toast('先填写目的地'); return; }
+  const b=document.querySelector('.ai-day.on'); aiRun(dest,b?+b.dataset.n:5,null); }
+function aiRegenerate(){ const m=SCENE_META; if(!m) return; const n=m.nDays||DAYS.length||5;
+  aiModal(`<div class="modal-head"><h3>重新生成「${esc(m.title)}」</h3><div class="modal-x" onclick="closeModal()">✕</div></div>
+    <p class="hint" style="margin:4px 4px 14px">后台生成新版，校验通过后才替换当前内容；旧版保留一份，可随时回滚。你勾过的清单和记的账不会被覆盖。</p>
+    <div class="record-btn" onclick="aiRun(${JSON.stringify(m.dest||m.title).replace(/"/g,'&quot;')},${n},'${m.id}')">开始重新生成</div>`); }
+async function aiRollback(){ const m=SCENE_META; if(!m) return; const prev=await AI.fsRead('scenes/'+m.id+'.prev.json'); if(!prev){ toast('没有可回滚的旧版'); return; }
+  const cur=await AI.fsRead('scenes/'+m.id+'.json');
+  if(m.source==='ai'){ await AI.fsWrite('scenes/'+m.id+'.json',prev); if(cur) await AI.fsWrite('scenes/'+m.id+'.prev.json',cur); const k=AI_INDEX.findIndex(x=>x.id===m.id); if(k>=0&&AI_INDEX[k].prevMeta){ const pm=AI_INDEX[k].prevMeta; pm.prevMeta=Object.assign({},AI_INDEX[k],{prevMeta:undefined}); AI_INDEX[k]=pm; const j=INDEX.findIndex(x=>x.id===m.id); if(j>=0) INDEX[j]=pm; await aiSaveIndex(); } }
+  else { // 内置场景：回滚 = 删除覆盖，回到 APK 内置版（当前 AI 版留作 .prev）
+    if(cur) await AI.fsWrite('scenes/'+m.id+'.prev.json',cur); await AI.fsDel('scenes/'+m.id+'.json'); const ov=(await AI.readJSON('overrides.json'))||{}; delete ov[m.id]; await AI.fsWrite('overrides.json',JSON.stringify(ov)); m._override=false; }
+  delete SCENE_CACHE[m.id]; const i=INDEX.findIndex(x=>x.id===m.id); if(m.source!=='ai'){ try{ SCENE_CACHE[m.id]=await loadJSON('data/scenes/'+INDEX[i].file); }catch(e){} const base=(await loadJSON('data/scenes/index.json')).scenes.find(x=>x.id===m.id); if(base) INDEX[i].cover=base.cover; }
+  forceCloseScene(); await openScene(i,null); toast('已回滚到上一版'); }
+async function aiDelete(){ const m=SCENE_META; if(!m||m.source!=='ai') return; if(!confirm(`删除「${m.title}」？本机保存的攻略和图片会一起删除。`)) return;
+  await AI.fsDel('scenes/'+m.id+'.json'); await AI.fsDel('scenes/'+m.id+'.prev.json'); AI_INDEX=AI_INDEX.filter(x=>x.id!==m.id); await aiSaveIndex();
+  const i=INDEX.findIndex(x=>x.id===m.id); if(i>=0) INDEX.splice(i,1); delete SCENE_CACHE[m.id]; forceCloseScene(); updateGnav(); toast('已删除'); }
+async function sceneAiActions(){ const m=SCENE_META; if(!m) return; const box=$('aiActions'); if(!box) return;
+  const hasPrev=!!(await AI.fsRead('scenes/'+m.id+'.prev.json')); const ai=m.source==='ai';
+  box.innerHTML=`<div class="sec-h">AI 攻略</div><div class="card glist">
+    ${ai?`<div class="grow"><div class="grow-main"><div class="grow-title">AI 生成的场景</div><div class="grow-sub">${esc(SCENE.source||'')}</div></div></div>`:''}
+    <div class="grow" onclick="aiRegenerate()"><div class="grow-main"><div class="grow-title">重新生成攻略</div><div class="grow-sub">校验通过才替换，旧版保留可回滚</div></div><span class="chev">›</span></div>
+    ${hasPrev?`<div class="grow" onclick="aiRollback()"><div class="grow-main"><div class="grow-title">回滚到上一版</div><div class="grow-sub">恢复替换前的内容</div></div><span class="chev">›</span></div>`:''}
+    ${ai?`<div class="grow" onclick="aiDelete()"><div class="grow-main"><div class="grow-title" style="color:#B42318">删除这个场景</div><div class="grow-sub">内置的 4 个场景不能删除</div></div><span class="chev">›</span></div>`:''}
+  </div>${ai&&(SCENE.imgCredits||[]).length?`<div class="card credits">${SCENE.imgCredits.map(x=>`<div>${esc(x)}</div>`).join('')}</div>`:''}`; }
+async function aiKeyCardHTML(){ const k=await AI.getKey();
+  return `<div class="sec-h">AI 生成（DeepSeek）</div><div class="card p16 ai-keycard">
+    <label class="ai-lab" for="aiKey">DeepSeek API Key</label>
+    <input id="aiKey" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="sk-…（在 platform.deepseek.com 申请）" value="${k?'••••••••'+esc(k.slice(-4)):''}">
+    <div class="ai-keyrow"><div class="add-btn" onclick="aiSaveKey()">保存</div>${k?'<div class="add-btn ghost" onclick="aiClearKey()">清除</div>':''}<span class="ai-keystate">${k?'已保存（尾号 '+esc(k.slice(-4))+'）':'未填写'}</span></div>
+    <div class="hint">Key 只保存在这台手机上，App 直接请求 DeepSeek，不经过任何第三方服务器。</div></div>`; }
+async function aiSaveKey(){ const v=($('aiKey').value||'').trim(); if(!v||v.startsWith('••')){ toast('请粘贴完整的 Key'); return; } if(!/^sk-[A-Za-z0-9_\-]{10,}$/.test(v)){ toast('Key 格式不对，应以 sk- 开头'); return; } await AI.kvSet(AI.KEY,v); toast('Key 已保存到本机'); renderMe(); }
+async function aiClearKey(){ await AI.kvSet(AI.KEY,null); toast('已清除 Key'); renderMe(); }
+
+/* ==================== 启动 ==================== */
+(async function boot(){
+  try{ INDEX=(await loadJSON('data/scenes/index.json')).scenes; INDEX.forEach(x=>{ if(x.cover&&x.focus) IMG_FOCUS[x.cover]=x.focus; }); }catch(e){ INDEX=[]; toast('场景索引加载失败'); }
+  try{ await mergeAIIndex(); }catch(e){}
+  await Promise.all(INDEX.filter(s=>s.status!=='placeholder').map(async s=>{ try{ SCENE_CACHE[s.id]=await loadSceneData(s); }catch(e){} }));
+  renderHome(); updateGnav();
+  renderOrders(); renderBudget(); renderWeather(); fxCalc();
+  const q=new URLSearchParams(location.search);
+  if(q.has('scene')){ const i=INDEX.findIndex(s=>s.id===q.get('scene')); if(i>=0){ await openScene(i,null); if(q.get('tab')) switchTab(q.get('tab'),true); if(q.get('sub')) openSub(q.get('sub')); } }
+  if(q.get('view')) gnavGo(q.get('view'));
+})();
+(function syncStatusBar(){ try{ const SB=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.StatusBar; if(SB) SB.setStyle({style:'LIGHT'}); }catch(e){} })();
+if('serviceWorker' in navigator && !window.Capacitor){ addEventListener('load',()=>{ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }); }
+</script>
+</body>
+</html>

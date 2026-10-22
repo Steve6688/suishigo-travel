@@ -1,0 +1,54 @@
+siguniang: "四姑娘山景区 Mount Siguniang Scenic Area 27.jpg", Wikimedia Commons, CC BY 2.0
+erhai: "Tree in front of Erhai Lake.jpg", Wikimedia Commons, CC0
+sayram: "Sayram Lake scenery.jpg", Wikimedia Commons, CC0
+dujiangyan: "Dujiang Weir.jpg" by 星星, Wikimedia Commons, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Dujiang_Weir.jpg
+shuangqiao: "四姑娘山双桥沟.jpg" by Polyphys, Wikimedia Commons, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%E5%9B%9B%E5%A7%91%E5%A8%98%E5%B1%B1%E5%8F%8C%E6%A1%A5%E6%B2%9F.jpg
+tagong: "Grasslands in Tagong county, Sichuan, China (41077322430).jpg" by Valerian Guillot from Cambridge, United Kingdom, Wikimedia Commons, CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Grasslands_in_Tagong_county,_Sichuan,_China_(41077322430).jpg
+kangding: "Kangding from above.jpg" by NoGhost, Wikimedia Commons, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kangding_from_above.jpg
+daligucheng: "202605 Streets in Dali Old Town 08.jpg" by Jonashtand, Wikimedia Commons, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:202605_Streets_in_Dali_Old_Town_08.jpg
+erhaihu: "20260223 Erhai Park in Dali, Yunnan NW 03.jpg" by Ngguls, Wikimedia Commons, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:20260223_Erhai_Park_in_Dali,_Yunnan_NW_03.jpg
+lijiang: "1 lijiang old town night.jpg" by chensiyuan, Wikimedia Commons, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:1_lijiang_old_town_night.jpg
+yulong: "Lijiang Yunnan China Jade-Dragon-Snow-Mountain-01.jpg" by CEphoto, Uwe Aranas, Wikimedia Commons, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Lijiang_Yunnan_China_Jade-Dragon-Snow-Mountain-01.jpg
+shuhe: "丽江束河古镇.JPG" by Gisling, Wikimedia Commons, CC BY 3.0 — https://commons.wikimedia.org/wiki/File:%E4%B8%BD%E6%B1%9F%E6%9D%9F%E6%B2%B3%E5%8F%A4%E9%95%87.JPG
+burqin: "BurqinFaqqua4663.jpg" by יעקב, Wikimedia Commons, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:BurqinFaqqua4663.jpg
+kanas: "LakeKanas.jpg" by Fanghong, Wikimedia Commons, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:LakeKanas.jpg
+hemu: "Hemu Village in the snow.jpg" by Leeinm, Wikimedia Commons, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Hemu_Village_in_the_snow.jpg
+nalati: "Nalati Grassland 2.jpg" by Yoshi Canopus, Wikimedia Commons, CC0 — https://commons.wikimedia.org/wiki/File:Nalati_Grassland_2.jpg
+sayramhu: "In Lake Sayram Scenic Spot, Xinjiang, China 34.jpg" by Tomskyhaha, Wikimedia Commons, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:In_Lake_Sayram_Scenic_Spot,_Xinjiang,_China_34.jpg
+urumqi: "Urumqi Skyline July 2019.jpg" by Albertaont, Wikimedia Commons, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Urumqi_Skyline_July_2019.jpg
+dushanzi: "G217 Duku.jpg" by Tigerzeng, Wikimedia Commons, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:G217_Duku.jpg
+jiaju: "Danba, Garze, Sichuan, China - panoramio (10).jpg" by jetsun, Wikimedia Commons, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Danba,_Garze,_Sichuan,_China_-_panoramio_(10).jpg
+fallback: generated gradient (no attribution required)
+
+--- 1.2.6 新换图（已裁切、调色） ---
+qg-danxia-v2: "Danxia-landform-1562852.jpg" by iamangela9, Wikimedia Commons, CC0 — https://commons.wikimedia.org/wiki/File:Danxia-landform-1562852.jpg (cropped, color-adjusted)
+xj-sayram-sunset: "Sunset upon the Lake Sayram.png" by Y Chen, Wikimedia Commons, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Sunset_upon_the_Lake_Sayram.png (cropped, color-adjusted)
+yn-lijiang-blue: "云南丽江古城4.JPG" by 蒋亦炯, Wikimedia Commons, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:%E4%BA%91%E5%8D%97%E4%B8%BD%E6%B1%9F%E5%8F%A4%E5%9F%8E4.JPG (cropped, color-adjusted)
+
+--- 小红书图片（作者 / 笔记；仅自用，未获商用授权） ---
+qg-cover-v2: 小红书 @Ziaarunrunrun — https://www.xiaohongshu.com/explore/68a3135c000000001c0088d2
+qg-trip-cover-v2: 小红书 @大智若愚📷 — https://www.xiaohongshu.com/explore/6a5cb4dc000000000101d1ee
+qg-d1-v2: 小红书 @Four three three — https://www.xiaohongshu.com/explore/6873bd770000000012023dad
+qg-d2-v2: 小红书 @杨杨周 — https://www.xiaohongshu.com/explore/68143b9e00000000090391f8
+qg-d3-v3: 小红书 @姜淇chill — 笔记ID 68b51a6b…（搜"青海海西大柴旦翡翠湖-下集"）
+qg-d4-v2: 小红书 @赵乙熊OneBear — https://www.xiaohongshu.com/explore/6881f42b0000000017032e8f
+qg-d5-v2: 小红书 @朱老师拍故宫 — 笔记ID 6a3a5f49…（搜"嘉峪关｜从晚霞到朝霞的浪漫旅程"）
+qg-d7-v2: 小红书 @inchains — https://www.xiaohongshu.com/explore/69c72e17000000002102e25c
+cx-cover-v2: 小红书 @麦麦纸 — https://www.xiaohongshu.com/explore/6ad77ba0000000001400c400
+cx-d1-v2: 小红书 @小白旅行丨纯玩小团 — https://www.xiaohongshu.com/explore/6a64e3cd000000001c00edaf
+cx-d2-v2: 小红书 @田七 — https://www.xiaohongshu.com/explore/6ad8d260000000002c0114c2
+cx-d3-v2: 小红书 @一定是chichi — https://www.xiaohongshu.com/explore/68469454000000001101f7ab
+cx-d4-v2: 小红书 @川西日拥岗 — https://www.xiaohongshu.com/explore/670b9347000000001b0117d5
+cx-d5-v2: 小红书 @lwcxy — https://www.xiaohongshu.com/explore/69c1fe67000000002301e3dd
+yn-cover-v2: 小红书 @盼山 — https://www.xiaohongshu.com/explore/69fa7e970000000036031a4f
+yn-d1-v2: 小红书 @眼泪拌饭又省包盐 — https://www.xiaohongshu.com/explore/68fc2edc00000000070169a2
+yn-d2-v2: 小红书 @三金 — https://www.xiaohongshu.com/explore/67f4b8eb000000001b03e960
+yn-d4-v2: 小红书 @momo — https://www.xiaohongshu.com/explore/69b2f928000000000c00bfbd
+yn-d5-v2: 小红书 @啊咦呀吼嘿 — https://www.xiaohongshu.com/explore/6a1513c0000000003601e99f
+xj-cover-v2: 小红书 @是angela呀 — https://www.xiaohongshu.com/explore/69673b59000000000a030871
+xj-d1-v2: 小红书 @7713mei — https://www.xiaohongshu.com/explore/6a3e96520000000007013d27
+xj-d2-v2: 小红书 @Rainze李四随 — 笔记ID 6ab8cc92…（搜"喀纳斯月亮湾最佳机位"）
+xj-d3-v2: 小红书 @大柚子米米 — 笔记ID 6876f2b9…（搜"7.15 禾木晨雾"）
+xj-d4-v2: 小红书 @琪儿 — 笔记ID 6a5b8dd2…（搜"追一场峡谷落日"）
+xj-d5-v2: 小红书 @二 — https://www.xiaohongshu.com/explore/6845764800000000230168b7
+xj-d7-v2: 小红书 @小白妹妹 — 笔记ID 6a18dd3d…（搜"答应我，一定要去果子沟大桥"）
